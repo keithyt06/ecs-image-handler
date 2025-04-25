@@ -1,0 +1,1445 @@
+{
+ "Description": "ECS Image Handler Stack - Serverless image processing with ECS Fargate",
+ "Resources": {
+  "ECSImageHandlerForwardAllQueryString51587837": {
+   "Type": "AWS::CloudFront::OriginRequestPolicy",
+   "Properties": {
+    "OriginRequestPolicyConfig": {
+     "CookiesConfig": {
+      "CookieBehavior": "none"
+     },
+     "HeadersConfig": {
+      "HeaderBehavior": "none"
+     },
+     "Name": {
+      "Fn::Join": [
+       "",
+       [
+        "ecs-image-handler-stack-",
+        {
+         "Ref": "AWS::Region"
+        },
+        "-FwdAllQS"
+       ]
+      ]
+     },
+     "QueryStringsConfig": {
+      "QueryStringBehavior": "all"
+     }
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "ecs-image-handler-stack/ECSImageHandler/ForwardAllQueryString/Resource"
+   }
+  },
+  "ECSImageHandlerCacheAllQueryString68F3BD68": {
+   "Type": "AWS::CloudFront::CachePolicy",
+   "Properties": {
+    "CachePolicyConfig": {
+     "DefaultTTL": 86400,
+     "MaxTTL": 31536000,
+     "MinTTL": 0,
+     "Name": {
+      "Fn::Join": [
+       "",
+       [
+        "ecs-image-handler-stack-",
+        {
+         "Ref": "AWS::Region"
+        },
+        "-CacheAllQS"
+       ]
+      ]
+     },
+     "ParametersInCacheKeyAndForwardedToOrigin": {
+      "CookiesConfig": {
+       "CookieBehavior": "none"
+      },
+      "EnableAcceptEncodingBrotli": false,
+      "EnableAcceptEncodingGzip": false,
+      "HeadersConfig": {
+       "HeaderBehavior": "none"
+      },
+      "QueryStringsConfig": {
+       "QueryStringBehavior": "all"
+      }
+     }
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "ecs-image-handler-stack/ECSImageHandler/CacheAllQueryString/Resource"
+   }
+  },
+  "ECSImageHandlerStyleTable1A843F83": {
+   "Type": "AWS::DynamoDB::Table",
+   "Properties": {
+    "AttributeDefinitions": [
+     {
+      "AttributeName": "id",
+      "AttributeType": "S"
+     }
+    ],
+    "BillingMode": "PAY_PER_REQUEST",
+    "KeySchema": [
+     {
+      "AttributeName": "id",
+      "KeyType": "HASH"
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "ecs-image-handler-stack/ECSImageHandler/StyleTable/Resource"
+   }
+  },
+  "ECSImageHandlerVpcF49FCD07": {
+   "Type": "AWS::EC2::VPC",
+   "Properties": {
+    "CidrBlock": "10.0.0.0/16",
+    "EnableDnsHostnames": true,
+    "EnableDnsSupport": true,
+    "InstanceTenancy": "default",
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "ecs-image-handler-stack/ECSImageHandler/Vpc"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "ecs-image-handler-stack/ECSImageHandler/Vpc/Resource"
+   }
+  },
+  "ECSImageHandlerVpcpublicSubnet1Subnet2315ECBE": {
+   "Type": "AWS::EC2::Subnet",
+   "Properties": {
+    "AvailabilityZone": "us-east-1a",
+    "CidrBlock": "10.0.0.0/19",
+    "MapPublicIpOnLaunch": true,
+    "Tags": [
+     {
+      "Key": "aws-cdk:subnet-name",
+      "Value": "public"
+     },
+     {
+      "Key": "aws-cdk:subnet-type",
+      "Value": "Public"
+     },
+     {
+      "Key": "Name",
+      "Value": "ecs-image-handler-stack/ECSImageHandler/Vpc/publicSubnet1"
+     }
+    ],
+    "VpcId": {
+     "Ref": "ECSImageHandlerVpcF49FCD07"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "ecs-image-handler-stack/ECSImageHandler/Vpc/publicSubnet1/Subnet"
+   }
+  },
+  "ECSImageHandlerVpcpublicSubnet1RouteTable0872CA06": {
+   "Type": "AWS::EC2::RouteTable",
+   "Properties": {
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "ecs-image-handler-stack/ECSImageHandler/Vpc/publicSubnet1"
+     }
+    ],
+    "VpcId": {
+     "Ref": "ECSImageHandlerVpcF49FCD07"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "ecs-image-handler-stack/ECSImageHandler/Vpc/publicSubnet1/RouteTable"
+   }
+  },
+  "ECSImageHandlerVpcpublicSubnet1RouteTableAssociation57AD42CC": {
+   "Type": "AWS::EC2::SubnetRouteTableAssociation",
+   "Properties": {
+    "RouteTableId": {
+     "Ref": "ECSImageHandlerVpcpublicSubnet1RouteTable0872CA06"
+    },
+    "SubnetId": {
+     "Ref": "ECSImageHandlerVpcpublicSubnet1Subnet2315ECBE"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "ecs-image-handler-stack/ECSImageHandler/Vpc/publicSubnet1/RouteTableAssociation"
+   }
+  },
+  "ECSImageHandlerVpcpublicSubnet1DefaultRouteFC2B7C12": {
+   "Type": "AWS::EC2::Route",
+   "Properties": {
+    "DestinationCidrBlock": "0.0.0.0/0",
+    "GatewayId": {
+     "Ref": "ECSImageHandlerVpcIGW38856E0B"
+    },
+    "RouteTableId": {
+     "Ref": "ECSImageHandlerVpcpublicSubnet1RouteTable0872CA06"
+    }
+   },
+   "DependsOn": [
+    "ECSImageHandlerVpcVPCGWEC89E243"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "ecs-image-handler-stack/ECSImageHandler/Vpc/publicSubnet1/DefaultRoute"
+   }
+  },
+  "ECSImageHandlerVpcpublicSubnet1EIP83985430": {
+   "Type": "AWS::EC2::EIP",
+   "Properties": {
+    "Domain": "vpc",
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "ecs-image-handler-stack/ECSImageHandler/Vpc/publicSubnet1"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "ecs-image-handler-stack/ECSImageHandler/Vpc/publicSubnet1/EIP"
+   }
+  },
+  "ECSImageHandlerVpcpublicSubnet1NATGatewayA367AE55": {
+   "Type": "AWS::EC2::NatGateway",
+   "Properties": {
+    "AllocationId": {
+     "Fn::GetAtt": [
+      "ECSImageHandlerVpcpublicSubnet1EIP83985430",
+      "AllocationId"
+     ]
+    },
+    "SubnetId": {
+     "Ref": "ECSImageHandlerVpcpublicSubnet1Subnet2315ECBE"
+    },
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "ecs-image-handler-stack/ECSImageHandler/Vpc/publicSubnet1"
+     }
+    ]
+   },
+   "DependsOn": [
+    "ECSImageHandlerVpcpublicSubnet1DefaultRouteFC2B7C12",
+    "ECSImageHandlerVpcpublicSubnet1RouteTableAssociation57AD42CC"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "ecs-image-handler-stack/ECSImageHandler/Vpc/publicSubnet1/NATGateway"
+   }
+  },
+  "ECSImageHandlerVpcpublicSubnet2SubnetE5B48832": {
+   "Type": "AWS::EC2::Subnet",
+   "Properties": {
+    "AvailabilityZone": "us-east-1b",
+    "CidrBlock": "10.0.32.0/19",
+    "MapPublicIpOnLaunch": true,
+    "Tags": [
+     {
+      "Key": "aws-cdk:subnet-name",
+      "Value": "public"
+     },
+     {
+      "Key": "aws-cdk:subnet-type",
+      "Value": "Public"
+     },
+     {
+      "Key": "Name",
+      "Value": "ecs-image-handler-stack/ECSImageHandler/Vpc/publicSubnet2"
+     }
+    ],
+    "VpcId": {
+     "Ref": "ECSImageHandlerVpcF49FCD07"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "ecs-image-handler-stack/ECSImageHandler/Vpc/publicSubnet2/Subnet"
+   }
+  },
+  "ECSImageHandlerVpcpublicSubnet2RouteTable72FC1AB9": {
+   "Type": "AWS::EC2::RouteTable",
+   "Properties": {
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "ecs-image-handler-stack/ECSImageHandler/Vpc/publicSubnet2"
+     }
+    ],
+    "VpcId": {
+     "Ref": "ECSImageHandlerVpcF49FCD07"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "ecs-image-handler-stack/ECSImageHandler/Vpc/publicSubnet2/RouteTable"
+   }
+  },
+  "ECSImageHandlerVpcpublicSubnet2RouteTableAssociationA5096C4E": {
+   "Type": "AWS::EC2::SubnetRouteTableAssociation",
+   "Properties": {
+    "RouteTableId": {
+     "Ref": "ECSImageHandlerVpcpublicSubnet2RouteTable72FC1AB9"
+    },
+    "SubnetId": {
+     "Ref": "ECSImageHandlerVpcpublicSubnet2SubnetE5B48832"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "ecs-image-handler-stack/ECSImageHandler/Vpc/publicSubnet2/RouteTableAssociation"
+   }
+  },
+  "ECSImageHandlerVpcpublicSubnet2DefaultRouteE3A97478": {
+   "Type": "AWS::EC2::Route",
+   "Properties": {
+    "DestinationCidrBlock": "0.0.0.0/0",
+    "GatewayId": {
+     "Ref": "ECSImageHandlerVpcIGW38856E0B"
+    },
+    "RouteTableId": {
+     "Ref": "ECSImageHandlerVpcpublicSubnet2RouteTable72FC1AB9"
+    }
+   },
+   "DependsOn": [
+    "ECSImageHandlerVpcVPCGWEC89E243"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "ecs-image-handler-stack/ECSImageHandler/Vpc/publicSubnet2/DefaultRoute"
+   }
+  },
+  "ECSImageHandlerVpcpublicSubnet3Subnet6D52BC5E": {
+   "Type": "AWS::EC2::Subnet",
+   "Properties": {
+    "AvailabilityZone": "us-east-1c",
+    "CidrBlock": "10.0.64.0/19",
+    "MapPublicIpOnLaunch": true,
+    "Tags": [
+     {
+      "Key": "aws-cdk:subnet-name",
+      "Value": "public"
+     },
+     {
+      "Key": "aws-cdk:subnet-type",
+      "Value": "Public"
+     },
+     {
+      "Key": "Name",
+      "Value": "ecs-image-handler-stack/ECSImageHandler/Vpc/publicSubnet3"
+     }
+    ],
+    "VpcId": {
+     "Ref": "ECSImageHandlerVpcF49FCD07"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "ecs-image-handler-stack/ECSImageHandler/Vpc/publicSubnet3/Subnet"
+   }
+  },
+  "ECSImageHandlerVpcpublicSubnet3RouteTable2AF72AF1": {
+   "Type": "AWS::EC2::RouteTable",
+   "Properties": {
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "ecs-image-handler-stack/ECSImageHandler/Vpc/publicSubnet3"
+     }
+    ],
+    "VpcId": {
+     "Ref": "ECSImageHandlerVpcF49FCD07"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "ecs-image-handler-stack/ECSImageHandler/Vpc/publicSubnet3/RouteTable"
+   }
+  },
+  "ECSImageHandlerVpcpublicSubnet3RouteTableAssociation45BCDD39": {
+   "Type": "AWS::EC2::SubnetRouteTableAssociation",
+   "Properties": {
+    "RouteTableId": {
+     "Ref": "ECSImageHandlerVpcpublicSubnet3RouteTable2AF72AF1"
+    },
+    "SubnetId": {
+     "Ref": "ECSImageHandlerVpcpublicSubnet3Subnet6D52BC5E"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "ecs-image-handler-stack/ECSImageHandler/Vpc/publicSubnet3/RouteTableAssociation"
+   }
+  },
+  "ECSImageHandlerVpcpublicSubnet3DefaultRoute49C05A75": {
+   "Type": "AWS::EC2::Route",
+   "Properties": {
+    "DestinationCidrBlock": "0.0.0.0/0",
+    "GatewayId": {
+     "Ref": "ECSImageHandlerVpcIGW38856E0B"
+    },
+    "RouteTableId": {
+     "Ref": "ECSImageHandlerVpcpublicSubnet3RouteTable2AF72AF1"
+    }
+   },
+   "DependsOn": [
+    "ECSImageHandlerVpcVPCGWEC89E243"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "ecs-image-handler-stack/ECSImageHandler/Vpc/publicSubnet3/DefaultRoute"
+   }
+  },
+  "ECSImageHandlerVpcprivateSubnet1SubnetD8242D8A": {
+   "Type": "AWS::EC2::Subnet",
+   "Properties": {
+    "AvailabilityZone": "us-east-1a",
+    "CidrBlock": "10.0.96.0/19",
+    "MapPublicIpOnLaunch": false,
+    "Tags": [
+     {
+      "Key": "aws-cdk:subnet-name",
+      "Value": "private"
+     },
+     {
+      "Key": "aws-cdk:subnet-type",
+      "Value": "Private"
+     },
+     {
+      "Key": "Name",
+      "Value": "ecs-image-handler-stack/ECSImageHandler/Vpc/privateSubnet1"
+     }
+    ],
+    "VpcId": {
+     "Ref": "ECSImageHandlerVpcF49FCD07"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "ecs-image-handler-stack/ECSImageHandler/Vpc/privateSubnet1/Subnet"
+   }
+  },
+  "ECSImageHandlerVpcprivateSubnet1RouteTable84AD569C": {
+   "Type": "AWS::EC2::RouteTable",
+   "Properties": {
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "ecs-image-handler-stack/ECSImageHandler/Vpc/privateSubnet1"
+     }
+    ],
+    "VpcId": {
+     "Ref": "ECSImageHandlerVpcF49FCD07"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "ecs-image-handler-stack/ECSImageHandler/Vpc/privateSubnet1/RouteTable"
+   }
+  },
+  "ECSImageHandlerVpcprivateSubnet1RouteTableAssociation31F52395": {
+   "Type": "AWS::EC2::SubnetRouteTableAssociation",
+   "Properties": {
+    "RouteTableId": {
+     "Ref": "ECSImageHandlerVpcprivateSubnet1RouteTable84AD569C"
+    },
+    "SubnetId": {
+     "Ref": "ECSImageHandlerVpcprivateSubnet1SubnetD8242D8A"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "ecs-image-handler-stack/ECSImageHandler/Vpc/privateSubnet1/RouteTableAssociation"
+   }
+  },
+  "ECSImageHandlerVpcprivateSubnet1DefaultRouteC2C48B2F": {
+   "Type": "AWS::EC2::Route",
+   "Properties": {
+    "DestinationCidrBlock": "0.0.0.0/0",
+    "NatGatewayId": {
+     "Ref": "ECSImageHandlerVpcpublicSubnet1NATGatewayA367AE55"
+    },
+    "RouteTableId": {
+     "Ref": "ECSImageHandlerVpcprivateSubnet1RouteTable84AD569C"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "ecs-image-handler-stack/ECSImageHandler/Vpc/privateSubnet1/DefaultRoute"
+   }
+  },
+  "ECSImageHandlerVpcprivateSubnet2Subnet3E2C0ABF": {
+   "Type": "AWS::EC2::Subnet",
+   "Properties": {
+    "AvailabilityZone": "us-east-1b",
+    "CidrBlock": "10.0.128.0/19",
+    "MapPublicIpOnLaunch": false,
+    "Tags": [
+     {
+      "Key": "aws-cdk:subnet-name",
+      "Value": "private"
+     },
+     {
+      "Key": "aws-cdk:subnet-type",
+      "Value": "Private"
+     },
+     {
+      "Key": "Name",
+      "Value": "ecs-image-handler-stack/ECSImageHandler/Vpc/privateSubnet2"
+     }
+    ],
+    "VpcId": {
+     "Ref": "ECSImageHandlerVpcF49FCD07"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "ecs-image-handler-stack/ECSImageHandler/Vpc/privateSubnet2/Subnet"
+   }
+  },
+  "ECSImageHandlerVpcprivateSubnet2RouteTableBE68C64C": {
+   "Type": "AWS::EC2::RouteTable",
+   "Properties": {
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "ecs-image-handler-stack/ECSImageHandler/Vpc/privateSubnet2"
+     }
+    ],
+    "VpcId": {
+     "Ref": "ECSImageHandlerVpcF49FCD07"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "ecs-image-handler-stack/ECSImageHandler/Vpc/privateSubnet2/RouteTable"
+   }
+  },
+  "ECSImageHandlerVpcprivateSubnet2RouteTableAssociationB69C1950": {
+   "Type": "AWS::EC2::SubnetRouteTableAssociation",
+   "Properties": {
+    "RouteTableId": {
+     "Ref": "ECSImageHandlerVpcprivateSubnet2RouteTableBE68C64C"
+    },
+    "SubnetId": {
+     "Ref": "ECSImageHandlerVpcprivateSubnet2Subnet3E2C0ABF"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "ecs-image-handler-stack/ECSImageHandler/Vpc/privateSubnet2/RouteTableAssociation"
+   }
+  },
+  "ECSImageHandlerVpcprivateSubnet2DefaultRoute9DC0E80B": {
+   "Type": "AWS::EC2::Route",
+   "Properties": {
+    "DestinationCidrBlock": "0.0.0.0/0",
+    "NatGatewayId": {
+     "Ref": "ECSImageHandlerVpcpublicSubnet1NATGatewayA367AE55"
+    },
+    "RouteTableId": {
+     "Ref": "ECSImageHandlerVpcprivateSubnet2RouteTableBE68C64C"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "ecs-image-handler-stack/ECSImageHandler/Vpc/privateSubnet2/DefaultRoute"
+   }
+  },
+  "ECSImageHandlerVpcprivateSubnet3SubnetC3219F07": {
+   "Type": "AWS::EC2::Subnet",
+   "Properties": {
+    "AvailabilityZone": "us-east-1c",
+    "CidrBlock": "10.0.160.0/19",
+    "MapPublicIpOnLaunch": false,
+    "Tags": [
+     {
+      "Key": "aws-cdk:subnet-name",
+      "Value": "private"
+     },
+     {
+      "Key": "aws-cdk:subnet-type",
+      "Value": "Private"
+     },
+     {
+      "Key": "Name",
+      "Value": "ecs-image-handler-stack/ECSImageHandler/Vpc/privateSubnet3"
+     }
+    ],
+    "VpcId": {
+     "Ref": "ECSImageHandlerVpcF49FCD07"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "ecs-image-handler-stack/ECSImageHandler/Vpc/privateSubnet3/Subnet"
+   }
+  },
+  "ECSImageHandlerVpcprivateSubnet3RouteTable400599B2": {
+   "Type": "AWS::EC2::RouteTable",
+   "Properties": {
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "ecs-image-handler-stack/ECSImageHandler/Vpc/privateSubnet3"
+     }
+    ],
+    "VpcId": {
+     "Ref": "ECSImageHandlerVpcF49FCD07"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "ecs-image-handler-stack/ECSImageHandler/Vpc/privateSubnet3/RouteTable"
+   }
+  },
+  "ECSImageHandlerVpcprivateSubnet3RouteTableAssociation77C46F6C": {
+   "Type": "AWS::EC2::SubnetRouteTableAssociation",
+   "Properties": {
+    "RouteTableId": {
+     "Ref": "ECSImageHandlerVpcprivateSubnet3RouteTable400599B2"
+    },
+    "SubnetId": {
+     "Ref": "ECSImageHandlerVpcprivateSubnet3SubnetC3219F07"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "ecs-image-handler-stack/ECSImageHandler/Vpc/privateSubnet3/RouteTableAssociation"
+   }
+  },
+  "ECSImageHandlerVpcprivateSubnet3DefaultRouteA5ACF510": {
+   "Type": "AWS::EC2::Route",
+   "Properties": {
+    "DestinationCidrBlock": "0.0.0.0/0",
+    "NatGatewayId": {
+     "Ref": "ECSImageHandlerVpcpublicSubnet1NATGatewayA367AE55"
+    },
+    "RouteTableId": {
+     "Ref": "ECSImageHandlerVpcprivateSubnet3RouteTable400599B2"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "ecs-image-handler-stack/ECSImageHandler/Vpc/privateSubnet3/DefaultRoute"
+   }
+  },
+  "ECSImageHandlerVpcIGW38856E0B": {
+   "Type": "AWS::EC2::InternetGateway",
+   "Properties": {
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "ecs-image-handler-stack/ECSImageHandler/Vpc"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "ecs-image-handler-stack/ECSImageHandler/Vpc/IGW"
+   }
+  },
+  "ECSImageHandlerVpcVPCGWEC89E243": {
+   "Type": "AWS::EC2::VPCGatewayAttachment",
+   "Properties": {
+    "InternetGatewayId": {
+     "Ref": "ECSImageHandlerVpcIGW38856E0B"
+    },
+    "VpcId": {
+     "Ref": "ECSImageHandlerVpcF49FCD07"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "ecs-image-handler-stack/ECSImageHandler/Vpc/VPCGW"
+   }
+  },
+  "ECSImageHandlerServiceLB30AE0217": {
+   "Type": "AWS::ElasticLoadBalancingV2::LoadBalancer",
+   "Properties": {
+    "LoadBalancerAttributes": [
+     {
+      "Key": "deletion_protection.enabled",
+      "Value": "false"
+     }
+    ],
+    "Scheme": "internet-facing",
+    "SecurityGroups": [
+     {
+      "Fn::GetAtt": [
+       "ECSImageHandlerServiceLBSecurityGroup2BC4AAE4",
+       "GroupId"
+      ]
+     }
+    ],
+    "Subnets": [
+     {
+      "Ref": "ECSImageHandlerVpcpublicSubnet1Subnet2315ECBE"
+     },
+     {
+      "Ref": "ECSImageHandlerVpcpublicSubnet2SubnetE5B48832"
+     },
+     {
+      "Ref": "ECSImageHandlerVpcpublicSubnet3Subnet6D52BC5E"
+     }
+    ],
+    "Type": "application"
+   },
+   "DependsOn": [
+    "ECSImageHandlerVpcpublicSubnet1DefaultRouteFC2B7C12",
+    "ECSImageHandlerVpcpublicSubnet1RouteTableAssociation57AD42CC",
+    "ECSImageHandlerVpcpublicSubnet2DefaultRouteE3A97478",
+    "ECSImageHandlerVpcpublicSubnet2RouteTableAssociationA5096C4E",
+    "ECSImageHandlerVpcpublicSubnet3DefaultRoute49C05A75",
+    "ECSImageHandlerVpcpublicSubnet3RouteTableAssociation45BCDD39"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "ecs-image-handler-stack/ECSImageHandler/Service/LB/Resource"
+   }
+  },
+  "ECSImageHandlerServiceLBSecurityGroup2BC4AAE4": {
+   "Type": "AWS::EC2::SecurityGroup",
+   "Properties": {
+    "GroupDescription": "Automatically created Security Group for ELB ecsimagehandlerstackECSImageHandlerServiceLB4556A754",
+    "SecurityGroupIngress": [
+     {
+      "CidrIp": "0.0.0.0/0",
+      "Description": "Allow from anyone on port 80",
+      "FromPort": 80,
+      "IpProtocol": "tcp",
+      "ToPort": 80
+     }
+    ],
+    "VpcId": {
+     "Ref": "ECSImageHandlerVpcF49FCD07"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "ecs-image-handler-stack/ECSImageHandler/Service/LB/SecurityGroup/Resource"
+   }
+  },
+  "ECSImageHandlerServiceLBSecurityGrouptoecsimagehandlerstackECSImageHandlerServiceSecurityGroup6EA2E5D78080DF0527B9": {
+   "Type": "AWS::EC2::SecurityGroupEgress",
+   "Properties": {
+    "Description": "Load balancer to target",
+    "DestinationSecurityGroupId": {
+     "Fn::GetAtt": [
+      "ECSImageHandlerServiceSecurityGroup72A0C666",
+      "GroupId"
+     ]
+    },
+    "FromPort": 8080,
+    "GroupId": {
+     "Fn::GetAtt": [
+      "ECSImageHandlerServiceLBSecurityGroup2BC4AAE4",
+      "GroupId"
+     ]
+    },
+    "IpProtocol": "tcp",
+    "ToPort": 8080
+   },
+   "Metadata": {
+    "aws:cdk:path": "ecs-image-handler-stack/ECSImageHandler/Service/LB/SecurityGroup/to ecsimagehandlerstackECSImageHandlerServiceSecurityGroup6EA2E5D7:8080"
+   }
+  },
+  "ECSImageHandlerServiceLBPublicListener32F4F66C": {
+   "Type": "AWS::ElasticLoadBalancingV2::Listener",
+   "Properties": {
+    "DefaultActions": [
+     {
+      "TargetGroupArn": {
+       "Ref": "ECSImageHandlerServiceLBPublicListenerECSGroupC3A7DBC4"
+      },
+      "Type": "forward"
+     }
+    ],
+    "LoadBalancerArn": {
+     "Ref": "ECSImageHandlerServiceLB30AE0217"
+    },
+    "Port": 80,
+    "Protocol": "HTTP"
+   },
+   "Metadata": {
+    "aws:cdk:path": "ecs-image-handler-stack/ECSImageHandler/Service/LB/PublicListener/Resource"
+   }
+  },
+  "ECSImageHandlerServiceLBPublicListenerECSGroupC3A7DBC4": {
+   "Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
+   "Properties": {
+    "HealthCheckIntervalSeconds": 60,
+    "HealthCheckPath": "/ping",
+    "HealthCheckTimeoutSeconds": 10,
+    "HealthyThresholdCount": 3,
+    "Port": 80,
+    "Protocol": "HTTP",
+    "TargetGroupAttributes": [
+     {
+      "Key": "stickiness.enabled",
+      "Value": "false"
+     }
+    ],
+    "TargetType": "ip",
+    "VpcId": {
+     "Ref": "ECSImageHandlerVpcF49FCD07"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "ecs-image-handler-stack/ECSImageHandler/Service/LB/PublicListener/ECSGroup/Resource"
+   }
+  },
+  "ECSImageHandlerServiceTaskDefTaskRole09FC97AB": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "ecs-tasks.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "ecs-image-handler-stack/ECSImageHandler/Service/TaskDef/TaskRole/Resource"
+   }
+  },
+  "ECSImageHandlerServiceTaskDefTaskRoleDefaultPolicy35F33B9D": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "dynamodb:BatchGetItem",
+        "dynamodb:ConditionCheckItem",
+        "dynamodb:DescribeTable",
+        "dynamodb:GetItem",
+        "dynamodb:GetRecords",
+        "dynamodb:GetShardIterator",
+        "dynamodb:Query",
+        "dynamodb:Scan"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "ECSImageHandlerStyleTable1A843F83",
+          "Arn"
+         ]
+        },
+        {
+         "Ref": "AWS::NoValue"
+        }
+       ]
+      },
+      {
+       "Action": [
+        "ssm:DescribeParameters",
+        "ssm:GetParameter",
+        "ssm:GetParameterHistory",
+        "ssm:GetParameters"
+       ],
+       "Effect": "Allow",
+       "Resource": "arn:aws:ssm:us-east-1:544592066775:parameter/ecs-image-handler/config"
+      },
+      {
+       "Action": [
+        "s3:Abort*",
+        "s3:GetBucket*",
+        "s3:GetObject*",
+        "s3:List*",
+        "s3:PutObject*"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        "arn:aws:s3:::test-image-handler-bucket",
+        "arn:aws:s3:::test-image-handler-bucket/*"
+       ]
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "ECSImageHandlerServiceTaskDefTaskRoleDefaultPolicy35F33B9D",
+    "Roles": [
+     {
+      "Ref": "ECSImageHandlerServiceTaskDefTaskRole09FC97AB"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "ecs-image-handler-stack/ECSImageHandler/Service/TaskDef/TaskRole/DefaultPolicy/Resource"
+   }
+  },
+  "ECSImageHandlerServiceTaskDef715EE3F9": {
+   "Type": "AWS::ECS::TaskDefinition",
+   "Properties": {
+    "ContainerDefinitions": [
+     {
+      "Environment": [
+       {
+        "Name": "REGION",
+        "Value": {
+         "Ref": "AWS::Region"
+        }
+       },
+       {
+        "Name": "AWS_REGION",
+        "Value": {
+         "Ref": "AWS::Region"
+        }
+       },
+       {
+        "Name": "VIPS_DISC_THRESHOLD",
+        "Value": "600m"
+       },
+       {
+        "Name": "SRC_BUCKET",
+        "Value": "test-image-handler-bucket"
+       },
+       {
+        "Name": "STYLE_TABLE_NAME",
+        "Value": {
+         "Ref": "ECSImageHandlerStyleTable1A843F83"
+        }
+       },
+       {
+        "Name": "SECRET_NAME",
+        "Value": ""
+       },
+       {
+        "Name": "CONFIG_JSON_PARAMETER_NAME",
+        "Value": "/ecs-image-handler/config"
+       }
+      ],
+      "Essential": true,
+      "Image": {
+       "Fn::Sub": "544592066775.dkr.ecr.us-east-1.${AWS::URLSuffix}/cdk-hnb659fds-container-assets-544592066775-us-east-1:e2b47f45d96908390071e7114d146b78ca0ddf8ef59e41801ef8f82011e69c76"
+      },
+      "LogConfiguration": {
+       "LogDriver": "awslogs",
+       "Options": {
+        "awslogs-group": {
+         "Ref": "ECSImageHandlerServiceTaskDefwebLogGroupC8F5A8F4"
+        },
+        "awslogs-stream-prefix": "ecs-image-handler",
+        "awslogs-region": "us-east-1"
+       }
+      },
+      "Name": "web",
+      "PortMappings": [
+       {
+        "ContainerPort": 8080,
+        "Protocol": "tcp"
+       }
+      ]
+     }
+    ],
+    "Cpu": "4096",
+    "ExecutionRoleArn": {
+     "Fn::GetAtt": [
+      "ECSImageHandlerServiceTaskDefExecutionRole61C3F86E",
+      "Arn"
+     ]
+    },
+    "Family": "ecsimagehandlerstackECSImageHandlerServiceTaskDef0E0DD3A3",
+    "Memory": "8192",
+    "NetworkMode": "awsvpc",
+    "RequiresCompatibilities": [
+     "FARGATE"
+    ],
+    "TaskRoleArn": {
+     "Fn::GetAtt": [
+      "ECSImageHandlerServiceTaskDefTaskRole09FC97AB",
+      "Arn"
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "ecs-image-handler-stack/ECSImageHandler/Service/TaskDef/Resource"
+   }
+  },
+  "ECSImageHandlerServiceTaskDefwebLogGroupC8F5A8F4": {
+   "Type": "AWS::Logs::LogGroup",
+   "Properties": {
+    "RetentionInDays": 7
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "ecs-image-handler-stack/ECSImageHandler/Service/TaskDef/web/LogGroup/Resource"
+   }
+  },
+  "ECSImageHandlerServiceTaskDefExecutionRole61C3F86E": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "ecs-tasks.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "ecs-image-handler-stack/ECSImageHandler/Service/TaskDef/ExecutionRole/Resource"
+   }
+  },
+  "ECSImageHandlerServiceTaskDefExecutionRoleDefaultPolicy647F0F9C": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:BatchGetImage",
+        "ecr:GetDownloadUrlForLayer"
+       ],
+       "Effect": "Allow",
+       "Resource": "arn:aws:ecr:us-east-1:544592066775:repository/cdk-hnb659fds-container-assets-544592066775-us-east-1"
+      },
+      {
+       "Action": "ecr:GetAuthorizationToken",
+       "Effect": "Allow",
+       "Resource": "*"
+      },
+      {
+       "Action": [
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::GetAtt": [
+         "ECSImageHandlerServiceTaskDefwebLogGroupC8F5A8F4",
+         "Arn"
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "ECSImageHandlerServiceTaskDefExecutionRoleDefaultPolicy647F0F9C",
+    "Roles": [
+     {
+      "Ref": "ECSImageHandlerServiceTaskDefExecutionRole61C3F86E"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "ecs-image-handler-stack/ECSImageHandler/Service/TaskDef/ExecutionRole/DefaultPolicy/Resource"
+   }
+  },
+  "ECSImageHandlerServiceED439CBB": {
+   "Type": "AWS::ECS::Service",
+   "Properties": {
+    "Cluster": {
+     "Ref": "EcsDefaultClusterMnL3mNNYNVpc18E0451A"
+    },
+    "DeploymentConfiguration": {
+     "Alarms": {
+      "AlarmNames": [],
+      "Enable": false,
+      "Rollback": false
+     },
+     "MaximumPercent": 200,
+     "MinimumHealthyPercent": 100
+    },
+    "DesiredCount": 2,
+    "EnableECSManagedTags": false,
+    "HealthCheckGracePeriodSeconds": 60,
+    "LaunchType": "FARGATE",
+    "LoadBalancers": [
+     {
+      "ContainerName": "web",
+      "ContainerPort": 8080,
+      "TargetGroupArn": {
+       "Ref": "ECSImageHandlerServiceLBPublicListenerECSGroupC3A7DBC4"
+      }
+     }
+    ],
+    "NetworkConfiguration": {
+     "AwsvpcConfiguration": {
+      "AssignPublicIp": "DISABLED",
+      "SecurityGroups": [
+       {
+        "Fn::GetAtt": [
+         "ECSImageHandlerServiceSecurityGroup72A0C666",
+         "GroupId"
+        ]
+       }
+      ],
+      "Subnets": [
+       {
+        "Ref": "ECSImageHandlerVpcprivateSubnet1SubnetD8242D8A"
+       },
+       {
+        "Ref": "ECSImageHandlerVpcprivateSubnet2Subnet3E2C0ABF"
+       },
+       {
+        "Ref": "ECSImageHandlerVpcprivateSubnet3SubnetC3219F07"
+       }
+      ]
+     }
+    },
+    "TaskDefinition": {
+     "Ref": "ECSImageHandlerServiceTaskDef715EE3F9"
+    }
+   },
+   "DependsOn": [
+    "ECSImageHandlerServiceLBPublicListenerECSGroupC3A7DBC4",
+    "ECSImageHandlerServiceLBPublicListener32F4F66C",
+    "ECSImageHandlerServiceTaskDefTaskRoleDefaultPolicy35F33B9D",
+    "ECSImageHandlerServiceTaskDefTaskRole09FC97AB"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "ecs-image-handler-stack/ECSImageHandler/Service/Service/Service"
+   }
+  },
+  "ECSImageHandlerServiceSecurityGroup72A0C666": {
+   "Type": "AWS::EC2::SecurityGroup",
+   "Properties": {
+    "GroupDescription": "ecs-image-handler-stack/ECSImageHandler/Service/Service/SecurityGroup",
+    "SecurityGroupEgress": [
+     {
+      "CidrIp": "0.0.0.0/0",
+      "Description": "Allow all outbound traffic by default",
+      "IpProtocol": "-1"
+     }
+    ],
+    "VpcId": {
+     "Ref": "ECSImageHandlerVpcF49FCD07"
+    }
+   },
+   "DependsOn": [
+    "ECSImageHandlerServiceTaskDefTaskRoleDefaultPolicy35F33B9D",
+    "ECSImageHandlerServiceTaskDefTaskRole09FC97AB"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "ecs-image-handler-stack/ECSImageHandler/Service/Service/SecurityGroup/Resource"
+   }
+  },
+  "ECSImageHandlerServiceSecurityGroupfromecsimagehandlerstackECSImageHandlerServiceLBSecurityGroup4232415F80803F375ABB": {
+   "Type": "AWS::EC2::SecurityGroupIngress",
+   "Properties": {
+    "Description": "Load balancer to target",
+    "FromPort": 8080,
+    "GroupId": {
+     "Fn::GetAtt": [
+      "ECSImageHandlerServiceSecurityGroup72A0C666",
+      "GroupId"
+     ]
+    },
+    "IpProtocol": "tcp",
+    "SourceSecurityGroupId": {
+     "Fn::GetAtt": [
+      "ECSImageHandlerServiceLBSecurityGroup2BC4AAE4",
+      "GroupId"
+     ]
+    },
+    "ToPort": 8080
+   },
+   "DependsOn": [
+    "ECSImageHandlerServiceTaskDefTaskRoleDefaultPolicy35F33B9D",
+    "ECSImageHandlerServiceTaskDefTaskRole09FC97AB"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "ecs-image-handler-stack/ECSImageHandler/Service/Service/SecurityGroup/from ecsimagehandlerstackECSImageHandlerServiceLBSecurityGroup4232415F:8080"
+   }
+  },
+  "ECSImageHandlerServiceTaskCountTarget96465C67": {
+   "Type": "AWS::ApplicationAutoScaling::ScalableTarget",
+   "Properties": {
+    "MaxCapacity": 20,
+    "MinCapacity": 2,
+    "ResourceId": {
+     "Fn::Join": [
+      "",
+      [
+       "service/",
+       {
+        "Ref": "EcsDefaultClusterMnL3mNNYNVpc18E0451A"
+       },
+       "/",
+       {
+        "Fn::GetAtt": [
+         "ECSImageHandlerServiceED439CBB",
+         "Name"
+        ]
+       }
+      ]
+     ]
+    },
+    "RoleARN": "arn:aws:iam::544592066775:role/aws-service-role/ecs.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_ECSService",
+    "ScalableDimension": "ecs:service:DesiredCount",
+    "ServiceNamespace": "ecs"
+   },
+   "DependsOn": [
+    "ECSImageHandlerServiceTaskDefTaskRoleDefaultPolicy35F33B9D",
+    "ECSImageHandlerServiceTaskDefTaskRole09FC97AB"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "ecs-image-handler-stack/ECSImageHandler/Service/Service/TaskCount/Target/Resource"
+   }
+  },
+  "ECSImageHandlerServiceTaskCountTargetCpuScalingD0FF2424": {
+   "Type": "AWS::ApplicationAutoScaling::ScalingPolicy",
+   "Properties": {
+    "PolicyName": "ecsimagehandlerstackECSImageHandlerServiceTaskCountTargetCpuScalingD176B041",
+    "PolicyType": "TargetTrackingScaling",
+    "ScalingTargetId": {
+     "Ref": "ECSImageHandlerServiceTaskCountTarget96465C67"
+    },
+    "TargetTrackingScalingPolicyConfiguration": {
+     "PredefinedMetricSpecification": {
+      "PredefinedMetricType": "ECSServiceAverageCPUUtilization"
+     },
+     "ScaleInCooldown": 60,
+     "ScaleOutCooldown": 30,
+     "TargetValue": 60
+    }
+   },
+   "DependsOn": [
+    "ECSImageHandlerServiceTaskDefTaskRoleDefaultPolicy35F33B9D",
+    "ECSImageHandlerServiceTaskDefTaskRole09FC97AB"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "ecs-image-handler-stack/ECSImageHandler/Service/Service/TaskCount/Target/CpuScaling/Resource"
+   }
+  },
+  "ECSImageHandlerS3Origin03EE7ADCC": {
+   "Type": "AWS::CloudFront::CloudFrontOriginAccessIdentity",
+   "Properties": {
+    "CloudFrontOriginAccessIdentityConfig": {
+     "Comment": "Identity for s3://test-image-handler-bucket"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "ecs-image-handler-stack/ECSImageHandler/S3Origin0/Resource"
+   }
+  },
+  "ECSImageHandlerDistribution0B41EC8CA": {
+   "Type": "AWS::CloudFront::Distribution",
+   "Properties": {
+    "DistributionConfig": {
+     "Comment": "ecs-image-handler-stack distribution0",
+     "CustomErrorResponses": [
+      {
+       "ErrorCachingMinTTL": 10,
+       "ErrorCode": 500
+      },
+      {
+       "ErrorCachingMinTTL": 10,
+       "ErrorCode": 501
+      },
+      {
+       "ErrorCachingMinTTL": 10,
+       "ErrorCode": 502
+      },
+      {
+       "ErrorCachingMinTTL": 10,
+       "ErrorCode": 503
+      },
+      {
+       "ErrorCachingMinTTL": 10,
+       "ErrorCode": 504
+      }
+     ],
+     "DefaultCacheBehavior": {
+      "CachePolicyId": {
+       "Ref": "ECSImageHandlerCacheAllQueryString68F3BD68"
+      },
+      "Compress": true,
+      "OriginRequestPolicyId": {
+       "Ref": "ECSImageHandlerForwardAllQueryString51587837"
+      },
+      "TargetOriginId": "ecsimagehandlerstackECSImageHandlerDistribution0OriginGroup153F36B51",
+      "ViewerProtocolPolicy": "redirect-to-https"
+     },
+     "Enabled": true,
+     "HttpVersion": "http2",
+     "IPV6Enabled": true,
+     "OriginGroups": {
+      "Items": [
+       {
+        "FailoverCriteria": {
+         "StatusCodes": {
+          "Items": [
+           403
+          ],
+          "Quantity": 1
+         }
+        },
+        "Id": "ecsimagehandlerstackECSImageHandlerDistribution0OriginGroup153F36B51",
+        "Members": {
+         "Items": [
+          {
+           "OriginId": "ecsimagehandlerstackECSImageHandlerDistribution0Origin1959D2FE6"
+          },
+          {
+           "OriginId": "ecsimagehandlerstackECSImageHandlerDistribution0Origin25BA4F0DF"
+          }
+         ],
+         "Quantity": 2
+        }
+       }
+      ],
+      "Quantity": 1
+     },
+     "Origins": [
+      {
+       "CustomOriginConfig": {
+        "OriginProtocolPolicy": "http-only",
+        "OriginSSLProtocols": [
+         "TLSv1.2"
+        ]
+       },
+       "DomainName": {
+        "Fn::GetAtt": [
+         "ECSImageHandlerServiceLB30AE0217",
+         "DNSName"
+        ]
+       },
+       "Id": "ecsimagehandlerstackECSImageHandlerDistribution0Origin1959D2FE6",
+       "OriginCustomHeaders": [
+        {
+         "HeaderName": "x-bucket",
+         "HeaderValue": "test-image-handler-bucket"
+        }
+       ]
+      },
+      {
+       "DomainName": "test-image-handler-bucket.s3.us-east-1.amazonaws.com",
+       "Id": "ecsimagehandlerstackECSImageHandlerDistribution0Origin25BA4F0DF",
+       "S3OriginConfig": {
+        "OriginAccessIdentity": {
+         "Fn::Join": [
+          "",
+          [
+           "origin-access-identity/cloudfront/",
+           {
+            "Ref": "ECSImageHandlerS3Origin03EE7ADCC"
+           }
+          ]
+         ]
+        }
+       }
+      }
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "ecs-image-handler-stack/ECSImageHandler/Distribution0/Resource"
+   }
+  },
+  "EcsDefaultClusterMnL3mNNYNVpc18E0451A": {
+   "Type": "AWS::ECS::Cluster",
+   "Metadata": {
+    "aws:cdk:path": "ecs-image-handler-stack/EcsDefaultClusterMnL3mNNYNVpc/Resource"
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/31Uy27bMBD8lt4ZtnXQQ49+JIGBoBFkI1djRa0VxhKp8uHAEPTvXZKWJSdGTxwOl9zZ4ZIz/vP3jP/4Bh/2TpSHu1oWvNs4EAdG1K4Ttfbl3mjlePdiZCVVjn89WpfpWooTW+7VTRrEG44h02kKnwuB1q5LVE66FBMyPYZMNyNW0jojC++kViF8Ou+ZvecLLw7oFmCRlScFjS6pki0UNYbwCHqGYsa711YE6jVbsswXJGrjC4UucCPKtXd42Z74kZtbq4WEQUxcCOBhnYXhD7gncPgBJ5YZeSQ4HrxWDg3hISApOc/mjqx/a6hmtkHhDVX+ZLRvo4b/Eg+VIbu+0GsV+VC53bXgQm7L521LZUf5zxrKBdSgBJaPYKqgFc1RCmRYg3WSOgDKIkZIVR3Jv9u7Tch9NZ/G0W2hOscMeLK+pcxkyVDZZBqV8+4sbQv2sMK9VHKw/jND/QOSTp9wn8qKFiW4EaSVrjMcstSeXF/WntSZ1JAR9kxCw7tcp06I49jZCQWRZgfWorN8pakRzbqBKrQJXTqt8RxbbaXT5hQ7tNYVFfWsq0vJA+4ZjLaAd9qSRjKeXuVFbDAnlnHNpGFr6PHShk3aN0q9Ivqe5Wi1N8mQF+9aH8/MwECDwYIonr4CeotVz5Qukb/b78fZPf9FH8a7lfLOkGWyQZ6n8R/4uBm6TQQAAA=="
+   },
+   "Metadata": {
+    "aws:cdk:path": "ecs-image-handler-stack/CDKMetadata/Default"
+   }
+  }
+ },
+ "Outputs": {
+  "StyleConfig": {
+   "Description": "The DynamoDB table for processing style",
+   "Value": {
+    "Ref": "ECSImageHandlerStyleTable1A843F83"
+   }
+  },
+  "ECSImageHandlerServiceLoadBalancerDNSBD92CBC2": {
+   "Value": {
+    "Fn::GetAtt": [
+     "ECSImageHandlerServiceLB30AE0217",
+     "DNSName"
+    ]
+   }
+  },
+  "ECSImageHandlerServiceServiceURL24A953AE": {
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      "http://",
+      {
+       "Fn::GetAtt": [
+        "ECSImageHandlerServiceLB30AE0217",
+        "DNSName"
+       ]
+      }
+     ]
+    ]
+   }
+  },
+  "BucketPolicy0": {
+   "Description": "NOTICE!: Please add this statement in the bucket policy of bucket0: test-image-handler-bucket",
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      "{\"Action\":\"s3:GetObject\",\"Effect\":\"Allow\",\"Principal\":{\"CanonicalUser\":\"",
+      {
+       "Fn::GetAtt": [
+        "ECSImageHandlerS3Origin03EE7ADCC",
+        "S3CanonicalUserId"
+       ]
+      },
+      "\"},\"Resource\":\"arn:aws:s3:::test-image-handler-bucket/*\"}"
+     ]
+    ]
+   }
+  },
+  "DistributionUrl0": {
+   "Description": "The CloudFront distribution url0 for bucket0: test-image-handler-bucket",
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      "https://",
+      {
+       "Fn::GetAtt": [
+        "ECSImageHandlerDistribution0B41EC8CA",
+        "DomainName"
+       ]
+      }
+     ]
+    ]
+   }
+  }
+ },
+ "Parameters": {
+  "ECSImageHandlerConfigJsonParameterParameter37E71D28": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/ecs-image-handler/config"
+  },
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}

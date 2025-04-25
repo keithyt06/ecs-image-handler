@@ -1,0 +1,408 @@
+{
+  "version": "41.0.0",
+  "artifacts": {
+    "ecs-image-handler-stack.assets": {
+      "type": "cdk:asset-manifest",
+      "properties": {
+        "file": "ecs-image-handler-stack.assets.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+      }
+    },
+    "ecs-image-handler-stack": {
+      "type": "aws:cloudformation:stack",
+      "environment": "aws://544592066775/us-east-1",
+      "properties": {
+        "templateFile": "ecs-image-handler-stack.template.json",
+        "terminationProtection": false,
+        "validateOnSynth": false,
+        "assumeRoleArn": "arn:${AWS::Partition}:iam::544592066775:role/cdk-hnb659fds-deploy-role-544592066775-us-east-1",
+        "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::544592066775:role/cdk-hnb659fds-cfn-exec-role-544592066775-us-east-1",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-544592066775-us-east-1/6e56d0ba232b693bf38c2fc875c440c4f41abcb723a30e259b7fab4d5c79cfcf.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
+        "additionalDependencies": [
+          "ecs-image-handler-stack.assets"
+        ],
+        "lookupRole": {
+          "arn": "arn:${AWS::Partition}:iam::544592066775:role/cdk-hnb659fds-lookup-role-544592066775-us-east-1",
+          "requiresBootstrapStackVersion": 8,
+          "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+        }
+      },
+      "dependencies": [
+        "ecs-image-handler-stack.assets"
+      ],
+      "metadata": {
+        "/ecs-image-handler-stack/ECSImageHandler/ForwardAllQueryString/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerForwardAllQueryString51587837"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/CacheAllQueryString/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerCacheAllQueryString68F3BD68"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/StyleTable/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerStyleTable1A843F83"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/StyleConfig": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "StyleConfig"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/ConfigJsonParameter.Parameter": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerConfigJsonParameterParameter37E71D28"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/Vpc/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerVpcF49FCD07"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/Vpc/publicSubnet1/Subnet": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerVpcpublicSubnet1Subnet2315ECBE"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/Vpc/publicSubnet1/RouteTable": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerVpcpublicSubnet1RouteTable0872CA06"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/Vpc/publicSubnet1/RouteTableAssociation": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerVpcpublicSubnet1RouteTableAssociation57AD42CC"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/Vpc/publicSubnet1/DefaultRoute": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerVpcpublicSubnet1DefaultRouteFC2B7C12"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/Vpc/publicSubnet1/EIP": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerVpcpublicSubnet1EIP83985430"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/Vpc/publicSubnet1/NATGateway": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerVpcpublicSubnet1NATGatewayA367AE55"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/Vpc/publicSubnet2/Subnet": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerVpcpublicSubnet2SubnetE5B48832"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/Vpc/publicSubnet2/RouteTable": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerVpcpublicSubnet2RouteTable72FC1AB9"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/Vpc/publicSubnet2/RouteTableAssociation": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerVpcpublicSubnet2RouteTableAssociationA5096C4E"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/Vpc/publicSubnet2/DefaultRoute": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerVpcpublicSubnet2DefaultRouteE3A97478"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/Vpc/publicSubnet3/Subnet": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerVpcpublicSubnet3Subnet6D52BC5E"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/Vpc/publicSubnet3/RouteTable": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerVpcpublicSubnet3RouteTable2AF72AF1"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/Vpc/publicSubnet3/RouteTableAssociation": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerVpcpublicSubnet3RouteTableAssociation45BCDD39"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/Vpc/publicSubnet3/DefaultRoute": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerVpcpublicSubnet3DefaultRoute49C05A75"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/Vpc/privateSubnet1/Subnet": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerVpcprivateSubnet1SubnetD8242D8A"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/Vpc/privateSubnet1/RouteTable": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerVpcprivateSubnet1RouteTable84AD569C"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/Vpc/privateSubnet1/RouteTableAssociation": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerVpcprivateSubnet1RouteTableAssociation31F52395"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/Vpc/privateSubnet1/DefaultRoute": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerVpcprivateSubnet1DefaultRouteC2C48B2F"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/Vpc/privateSubnet2/Subnet": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerVpcprivateSubnet2Subnet3E2C0ABF"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/Vpc/privateSubnet2/RouteTable": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerVpcprivateSubnet2RouteTableBE68C64C"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/Vpc/privateSubnet2/RouteTableAssociation": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerVpcprivateSubnet2RouteTableAssociationB69C1950"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/Vpc/privateSubnet2/DefaultRoute": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerVpcprivateSubnet2DefaultRoute9DC0E80B"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/Vpc/privateSubnet3/Subnet": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerVpcprivateSubnet3SubnetC3219F07"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/Vpc/privateSubnet3/RouteTable": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerVpcprivateSubnet3RouteTable400599B2"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/Vpc/privateSubnet3/RouteTableAssociation": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerVpcprivateSubnet3RouteTableAssociation77C46F6C"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/Vpc/privateSubnet3/DefaultRoute": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerVpcprivateSubnet3DefaultRouteA5ACF510"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/Vpc/IGW": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerVpcIGW38856E0B"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/Vpc/VPCGW": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerVpcVPCGWEC89E243"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/Service/LB/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerServiceLB30AE0217"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/Service/LB/SecurityGroup/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerServiceLBSecurityGroup2BC4AAE4"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/Service/LB/SecurityGroup/to ecsimagehandlerstackECSImageHandlerServiceSecurityGroup6EA2E5D7:8080": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerServiceLBSecurityGrouptoecsimagehandlerstackECSImageHandlerServiceSecurityGroup6EA2E5D78080DF0527B9"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/Service/LB/PublicListener/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerServiceLBPublicListener32F4F66C"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/Service/LB/PublicListener/ECSGroup/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerServiceLBPublicListenerECSGroupC3A7DBC4"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/Service/LoadBalancerDNS": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerServiceLoadBalancerDNSBD92CBC2"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/Service/ServiceURL": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerServiceServiceURL24A953AE"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/Service/TaskDef/TaskRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerServiceTaskDefTaskRole09FC97AB"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/Service/TaskDef/TaskRole/DefaultPolicy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerServiceTaskDefTaskRoleDefaultPolicy35F33B9D"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/Service/TaskDef/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerServiceTaskDef715EE3F9"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/Service/TaskDef/web/LogGroup/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerServiceTaskDefwebLogGroupC8F5A8F4"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/Service/TaskDef/ExecutionRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerServiceTaskDefExecutionRole61C3F86E"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/Service/TaskDef/ExecutionRole/DefaultPolicy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerServiceTaskDefExecutionRoleDefaultPolicy647F0F9C"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/Service/Service/Service": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerServiceED439CBB"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/Service/Service/SecurityGroup/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerServiceSecurityGroup72A0C666"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/Service/Service/SecurityGroup/from ecsimagehandlerstackECSImageHandlerServiceLBSecurityGroup4232415F:8080": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerServiceSecurityGroupfromecsimagehandlerstackECSImageHandlerServiceLBSecurityGroup4232415F80803F375ABB"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/Service/Service/TaskCount/Target/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerServiceTaskCountTarget96465C67"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/Service/Service/TaskCount/Target/CpuScaling/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerServiceTaskCountTargetCpuScalingD0FF2424"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/S3Origin0/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerS3Origin03EE7ADCC"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/BucketPolicy0": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BucketPolicy0"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/Distribution0/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ECSImageHandlerDistribution0B41EC8CA"
+          }
+        ],
+        "/ecs-image-handler-stack/ECSImageHandler/DistributionUrl0": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DistributionUrl0"
+          }
+        ],
+        "/ecs-image-handler-stack/EcsDefaultClusterMnL3mNNYNVpc/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "EcsDefaultClusterMnL3mNNYNVpc18E0451A"
+          }
+        ],
+        "/ecs-image-handler-stack/CDKMetadata/Default": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CDKMetadata"
+          }
+        ],
+        "/ecs-image-handler-stack/BootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BootstrapVersion"
+          }
+        ],
+        "/ecs-image-handler-stack/CheckBootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CheckBootstrapVersion"
+          }
+        ]
+      },
+      "displayName": "ecs-image-handler-stack"
+    },
+    "Tree": {
+      "type": "cdk:tree",
+      "properties": {
+        "file": "tree.json"
+      }
+    }
+  },
+  "minimumCliVersion": "2.1005.0"
+}

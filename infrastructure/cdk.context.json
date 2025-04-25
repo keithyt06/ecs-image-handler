@@ -1,0 +1,18 @@
+{
+  "buckets": [
+    "test-image-handler-bucket"
+  ],
+  "config_json_parameter_name": "/ecs-image-handler/config",
+  "ecs_desired_count": 2,
+  "enable_waf": false,
+  "enable_cloudfront": true,
+  "enable_public_alb": true,
+  "availability-zones:account=544592066775:region=us-east-1": [
+    "us-east-1a",
+    "us-east-1b",
+    "us-east-1c",
+    "us-east-1d",
+    "us-east-1e",
+    "us-east-1f"
+  ]
+}
