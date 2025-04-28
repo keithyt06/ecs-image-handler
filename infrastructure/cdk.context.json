@@ -1,13 +1,17 @@
 {
   "buckets": [
-    "test-image-handler-bucket"
+    "new-ue1-img"
   ],
   "config_json_parameter_name": "/ecs-image-handler/config",
   "ecs_desired_count": 2,
   "enable_waf": false,
   "enable_cloudfront": true,
   "enable_public_alb": true,
-  "availability-zones:account=544592066775:region=us-east-1": [
+  "use_default_vpc": "0",
+  "env": {
+    "AWS_SDK_LOAD_CONFIG": "1"
+  },
+  "availability-zones:account=057313215210:region=us-east-1": [
     "us-east-1a",
     "us-east-1b",
     "us-east-1c",

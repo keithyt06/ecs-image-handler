@@ -133,9 +133,8 @@ export class ECSImageHandler extends Construct {
         });
         
         bkt.addToResourcePolicy(bktplcy);
-
-        this.cfnOutput(`BucketPolicy${index}`, `${JSON.stringify(bktplcy.toJSON())}`, 
-          `NOTICE!: Please add this statement in the bucket policy of bucket${index}: ${bkt.bucketName}`);
+        
+        // 移除不必要的输出，因为策略已经自动应用到存储桶
 
         this.createDistribution(
           new origins.OriginGroup({

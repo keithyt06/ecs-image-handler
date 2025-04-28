@@ -11,21 +11,21 @@
     },
     "ecs-image-handler-stack": {
       "type": "aws:cloudformation:stack",
-      "environment": "aws://544592066775/us-east-1",
+      "environment": "aws://057313215210/us-east-1",
       "properties": {
         "templateFile": "ecs-image-handler-stack.template.json",
         "terminationProtection": false,
         "validateOnSynth": false,
-        "assumeRoleArn": "arn:${AWS::Partition}:iam::544592066775:role/cdk-hnb659fds-deploy-role-544592066775-us-east-1",
-        "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::544592066775:role/cdk-hnb659fds-cfn-exec-role-544592066775-us-east-1",
-        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-544592066775-us-east-1/6e56d0ba232b693bf38c2fc875c440c4f41abcb723a30e259b7fab4d5c79cfcf.json",
+        "assumeRoleArn": "arn:${AWS::Partition}:iam::057313215210:role/cdk-hnb659fds-deploy-role-057313215210-us-east-1",
+        "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::057313215210:role/cdk-hnb659fds-cfn-exec-role-057313215210-us-east-1",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-057313215210-us-east-1/f8f73c9f3c7690886f3475547a2dec999f6dd0dc53577d62e3a1f2f0284b3f48.json",
         "requiresBootstrapStackVersion": 6,
         "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
         "additionalDependencies": [
           "ecs-image-handler-stack.assets"
         ],
         "lookupRole": {
-          "arn": "arn:${AWS::Partition}:iam::544592066775:role/cdk-hnb659fds-lookup-role-544592066775-us-east-1",
+          "arn": "arn:${AWS::Partition}:iam::057313215210:role/cdk-hnb659fds-lookup-role-057313215210-us-east-1",
           "requiresBootstrapStackVersion": 8,
           "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
         }
@@ -350,12 +350,6 @@
           {
             "type": "aws:cdk:logicalId",
             "data": "ECSImageHandlerS3Origin03EE7ADCC"
-          }
-        ],
-        "/ecs-image-handler-stack/ECSImageHandler/BucketPolicy0": [
-          {
-            "type": "aws:cdk:logicalId",
-            "data": "BucketPolicy0"
           }
         ],
         "/ecs-image-handler-stack/ECSImageHandler/Distribution0/Resource": [

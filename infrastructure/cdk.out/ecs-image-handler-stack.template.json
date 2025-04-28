@@ -824,7 +824,7 @@
         "ssm:GetParameters"
        ],
        "Effect": "Allow",
-       "Resource": "arn:aws:ssm:us-east-1:544592066775:parameter/ecs-image-handler/config"
+       "Resource": "arn:aws:ssm:us-east-1:057313215210:parameter/ecs-image-handler/config"
       },
       {
        "Action": [
@@ -836,8 +836,8 @@
        ],
        "Effect": "Allow",
        "Resource": [
-        "arn:aws:s3:::test-image-handler-bucket",
-        "arn:aws:s3:::test-image-handler-bucket/*"
+        "arn:aws:s3:::new-ue1-img",
+        "arn:aws:s3:::new-ue1-img/*"
        ]
       }
      ],
@@ -878,7 +878,7 @@
        },
        {
         "Name": "SRC_BUCKET",
-        "Value": "test-image-handler-bucket"
+        "Value": "new-ue1-img"
        },
        {
         "Name": "STYLE_TABLE_NAME",
@@ -893,11 +893,15 @@
        {
         "Name": "CONFIG_JSON_PARAMETER_NAME",
         "Value": "/ecs-image-handler/config"
+       },
+       {
+        "Name": "AWS_SDK_LOAD_CONFIG",
+        "Value": "1"
        }
       ],
       "Essential": true,
       "Image": {
-       "Fn::Sub": "544592066775.dkr.ecr.us-east-1.${AWS::URLSuffix}/cdk-hnb659fds-container-assets-544592066775-us-east-1:e2b47f45d96908390071e7114d146b78ca0ddf8ef59e41801ef8f82011e69c76"
+       "Fn::Sub": "057313215210.dkr.ecr.us-east-1.${AWS::URLSuffix}/cdk-hnb659fds-container-assets-057313215210-us-east-1:df3079341dbc69fd8eb41ef9cc66d68e676528b421827bd145932be801274416"
       },
       "LogConfiguration": {
        "LogDriver": "awslogs",
@@ -985,7 +989,7 @@
         "ecr:GetDownloadUrlForLayer"
        ],
        "Effect": "Allow",
-       "Resource": "arn:aws:ecr:us-east-1:544592066775:repository/cdk-hnb659fds-container-assets-544592066775-us-east-1"
+       "Resource": "arn:aws:ecr:us-east-1:057313215210:repository/cdk-hnb659fds-container-assets-057313215210-us-east-1"
       },
       {
        "Action": "ecr:GetAuthorizationToken",
@@ -1159,7 +1163,7 @@
       ]
      ]
     },
-    "RoleARN": "arn:aws:iam::544592066775:role/aws-service-role/ecs.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_ECSService",
+    "RoleARN": "arn:aws:iam::057313215210:role/aws-service-role/ecs.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_ECSService",
     "ScalableDimension": "ecs:service:DesiredCount",
     "ServiceNamespace": "ecs"
    },
@@ -1200,7 +1204,7 @@
    "Type": "AWS::CloudFront::CloudFrontOriginAccessIdentity",
    "Properties": {
     "CloudFrontOriginAccessIdentityConfig": {
-     "Comment": "Identity for s3://test-image-handler-bucket"
+     "Comment": "Identity for s3://new-ue1-img"
     }
    },
    "Metadata": {
@@ -1293,12 +1297,12 @@
        "OriginCustomHeaders": [
         {
          "HeaderName": "x-bucket",
-         "HeaderValue": "test-image-handler-bucket"
+         "HeaderValue": "new-ue1-img"
         }
        ]
       },
       {
-       "DomainName": "test-image-handler-bucket.s3.us-east-1.amazonaws.com",
+       "DomainName": "new-ue1-img.s3.us-east-1.amazonaws.com",
        "Id": "ecsimagehandlerstackECSImageHandlerDistribution0Origin25BA4F0DF",
        "S3OriginConfig": {
         "OriginAccessIdentity": {
@@ -1330,7 +1334,7 @@
   "CDKMetadata": {
    "Type": "AWS::CDK::Metadata",
    "Properties": {
-    "Analytics": "v2:deflate64:H4sIAAAAAAAA/31Uy27bMBD8lt4ZtnXQQ49+JIGBoBFkI1djRa0VxhKp8uHAEPTvXZKWJSdGTxwOl9zZ4ZIz/vP3jP/4Bh/2TpSHu1oWvNs4EAdG1K4Ttfbl3mjlePdiZCVVjn89WpfpWooTW+7VTRrEG44h02kKnwuB1q5LVE66FBMyPYZMNyNW0jojC++kViF8Ou+ZvecLLw7oFmCRlScFjS6pki0UNYbwCHqGYsa711YE6jVbsswXJGrjC4UucCPKtXd42Z74kZtbq4WEQUxcCOBhnYXhD7gncPgBJ5YZeSQ4HrxWDg3hISApOc/mjqx/a6hmtkHhDVX+ZLRvo4b/Eg+VIbu+0GsV+VC53bXgQm7L521LZUf5zxrKBdSgBJaPYKqgFc1RCmRYg3WSOgDKIkZIVR3Jv9u7Tch9NZ/G0W2hOscMeLK+pcxkyVDZZBqV8+4sbQv2sMK9VHKw/jND/QOSTp9wn8qKFiW4EaSVrjMcstSeXF/WntSZ1JAR9kxCw7tcp06I49jZCQWRZgfWorN8pakRzbqBKrQJXTqt8RxbbaXT5hQ7tNYVFfWsq0vJA+4ZjLaAd9qSRjKeXuVFbDAnlnHNpGFr6PHShk3aN0q9Ivqe5Wi1N8mQF+9aH8/MwECDwYIonr4CeotVz5Qukb/b78fZPf9FH8a7lfLOkGWyQZ6n8R/4uBm6TQQAAA=="
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/31STW8iMQz9Lb2HbMvuZY98tBVStUWAekWejJm6hGQ2dkBoNP99lQwwtEV78vPLS/zseKgffg/1/R0ceGDK7cBSoZulgNkqOPC6MdbHchO8E928BqrILfBvRJa5t2SOarJxN2kw79hLrtNOPjIGmWclOiHpNKnSU6p0UzEllkBFFPIuya/zVvFPPY5mizIGRlUeHex8WehmBYXFJM+gVWiGunmrTaLe5hM1j4Uls4yFQ0lcjxY+Cl6ud3zPjZi9ITibyQcJPM7mKfwBeQbBAxzVPNAeBPuHZ04wOLwIOienbCQC5n2HTtQSTQwkx+fgY509/Jd4rAIyf6NnLvOpc17XIKk261FdWzLZ/ouHcgwWnMHyCUKVvGLYk0GFFljIWA9lkRXkqv1QN7dvh1T7U36tIxZ0J80ZX52vIFQol86u0uxcNydrK+DtFDfk6Dz6r4x3AuQwXHFf2soj6uDSgE3fmR6Z+OhETWxk6XyeYKsIdrpZ+G4Tcuw3u0PJZFgDMwrrqTdbDLMdVGlNUNKZXmDtmcSHY95Q6yvWzYuvLi2fcaugHwtE8WzAkqt005tNw8ltfGa6sApgtuSqZXevt/qJaFu1QPYxdAN5jVLH/OYcAuwwjSCbXwpU5KpWOV+i/uAf++FQP/zS93cfTDQI0QntUC+6+A88ysPVTgQAAA=="
    },
    "Metadata": {
     "aws:cdk:path": "ecs-image-handler-stack/CDKMetadata/Default"
@@ -1368,26 +1372,8 @@
     ]
    }
   },
-  "BucketPolicy0": {
-   "Description": "NOTICE!: Please add this statement in the bucket policy of bucket0: test-image-handler-bucket",
-   "Value": {
-    "Fn::Join": [
-     "",
-     [
-      "{\"Action\":\"s3:GetObject\",\"Effect\":\"Allow\",\"Principal\":{\"CanonicalUser\":\"",
-      {
-       "Fn::GetAtt": [
-        "ECSImageHandlerS3Origin03EE7ADCC",
-        "S3CanonicalUserId"
-       ]
-      },
-      "\"},\"Resource\":\"arn:aws:s3:::test-image-handler-bucket/*\"}"
-     ]
-    ]
-   }
-  },
   "DistributionUrl0": {
-   "Description": "The CloudFront distribution url0 for bucket0: test-image-handler-bucket",
+   "Description": "The CloudFront distribution url0 for bucket0: new-ue1-img",
    "Value": {
     "Fn::Join": [
      "",
