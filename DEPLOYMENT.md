@@ -23,16 +23,23 @@ cd ecs-image-handler
 
 ### 2. 配置 CDK 上下文
 
-编辑 `infrastructure/cdk.context.json` 文件：
+编辑 `infrastructure/cdk.context.json` 文件，配置多个存储桶：
 
 ```json
 {
-  "buckets": ["test-image-handler-bucket"],
+  "buckets": [
+    "primary-image-bucket",
+    "secondary-image-bucket"
+  ],
   "config_json_parameter_name": "/ecs-image-handler/config",
   "ecs_desired_count": 2,
   "enable_waf": false,
   "enable_cloudfront": true,
-  "enable_public_alb": true
+  "enable_public_alb": true,
+  "use_default_vpc": "0",
+  "env": {
+    "AWS_SDK_LOAD_CONFIG": "1"
+  }
 }
 ```
 
@@ -49,8 +56,11 @@ aws ssm put-parameter \
 
 ### 4. 创建 S3 存储桶
 
+为配置中的每个存储桶创建 S3 存储桶：
+
 ```bash
-aws s3 mb s3://test-image-handler-bucket --region us-east-1
+aws s3 mb s3://primary-image-bucket --region us-east-1
+aws s3 mb s3://secondary-image-bucket --region us-east-1
 ```
 
 ### 5. 安装依赖项
@@ -65,50 +75,7 @@ cd ../service
 npm install --legacy-peer-deps
 ```
 
-### 6. 修改 Dockerfile 以支持多架构
-
-如果您使用的是 ARM 架构的 Mac (M1/M2/M3)，需要修改 Dockerfile 以确保在 x86_64 架构上运行：
-
-```bash
-cd service
-```
-
-创建以下内容的 Dockerfile：
-
-```dockerfile
-FROM --platform=linux/amd64 public.ecr.aws/docker/library/node:14-alpine3.16 as builder
-
-WORKDIR /app
-
-COPY package.json yarn.lock /app/
-
-# Skip installing dependencies for build
-RUN mkdir -p /app/lib/src && \
-    touch /app/lib/src/index.js
-
-FROM --platform=linux/amd64 public.ecr.aws/docker/library/node:14-alpine3.16
-
-WORKDIR /app
-
-COPY package.json yarn.lock /app/
-
-# Create a simple server that responds with 200 OK
-RUN echo 'const http = require("http"); \
-    const server = http.createServer((req, res) => { \
-      res.statusCode = 200; \
-      res.setHeader("Content-Type", "application/json"); \
-      res.end(JSON.stringify({ status: "ok", message: "Image handler is running" })); \
-    }); \
-    server.listen(8080, () => { \
-      console.log("Server running on port 8080"); \
-    });' > /app/index.js
-
-EXPOSE 8080
-
-CMD ["node", "/app/index.js"]
-```
-
-### 7. 引导 CDK
+### 6. 引导 CDK
 
 ```bash
 cd ../infrastructure
@@ -117,7 +84,7 @@ cdk bootstrap aws://YOUR_ACCOUNT_ID/us-east-1
 
 将 `YOUR_ACCOUNT_ID` 替换为您的 AWS 账户 ID。
 
-### 8. 部署堆栈
+### 7. 部署堆栈
 
 ```bash
 cdk deploy --require-approval never
@@ -125,10 +92,13 @@ cdk deploy --require-approval never
 
 部署过程大约需要 10-15 分钟完成。
 
-### 9. 上传测试图像
+### 8. 上传测试图像
+
+将测试图像上传到您配置的每个存储桶：
 
 ```bash
-aws s3 cp ../service/test/fixtures/example.jpg s3://test-image-handler-bucket/ --region us-east-1
+aws s3 cp ../service/test/fixtures/example.jpg s3://primary-image-bucket/ --region us-east-1
+aws s3 cp ../service/test/fixtures/example.jpg s3://secondary-image-bucket/ --region us-east-1
 ```
 
 ## 测试部署
@@ -141,37 +111,68 @@ aws s3 cp ../service/test/fixtures/example.jpg s3://test-image-handler-bucket/ -
 
 ### 测试图像处理功能
 
-使用 CloudFront URL 访问并处理图像：
+#### 通过 CloudFront 访问多个存储桶中的图像
 
-#### 基本访问
+ECS Image Handler 现在支持通过单个 CloudFront 分发访问多个 S3 存储桶中的图像。有两种方式可以指定要访问的存储桶：
+
+1. **通过路径前缀指定存储桶**（推荐用于 CloudFront 访问）：
 
 ```
-https://YOUR_CLOUDFRONT_DOMAIN/example.jpg
+# 访问默认存储桶（第一个配置的存储桶）中的图像
+https://YOUR_CLOUDFRONT_DOMAIN/example.jpg?x-oss-process=image/resize,w_300,h_200
+
+# 访问指定存储桶中的图像
+https://YOUR_CLOUDFRONT_DOMAIN/secondary-image-bucket/example.jpg?x-oss-process=image/resize,w_300,h_200
 ```
 
-#### 调整大小
+2. **通过 HTTP 头指定存储桶**（适用于直接访问 ALB）：
+
+```bash
+curl -H "x-bucket: secondary-image-bucket" "http://YOUR_ALB_DOMAIN/example.jpg?x-oss-process=image/resize,w_300,h_200"
+```
+
+#### 支持的图像处理操作
+
+##### 调整大小
 
 ```
 https://YOUR_CLOUDFRONT_DOMAIN/example.jpg?x-oss-process=image/resize,w_300,h_200
 ```
 
-#### 转换格式
+##### 转换格式
 
 ```
 https://YOUR_CLOUDFRONT_DOMAIN/example.jpg?x-oss-process=image/format,webp
 ```
 
-#### 调整质量
+##### 调整质量
 
 ```
 https://YOUR_CLOUDFRONT_DOMAIN/example.jpg?x-oss-process=image/quality,q_80
 ```
 
-#### 组合多个转换
+##### 组合多个转换
 
 ```
 https://YOUR_CLOUDFRONT_DOMAIN/example.jpg?x-oss-process=image/resize,w_300,h_200/quality,q_80/format,webp
 ```
+
+## 多存储桶架构
+
+ECS Image Handler 使用单个 CloudFront 分发来支持多个 S3 存储桶，具有以下优势：
+
+1. **简化管理**：只需管理一个 CloudFront 分发，而不是为每个存储桶创建单独的分发
+2. **统一域名**：所有图片都通过同一个域名访问，只是路径不同
+3. **灵活性**：可以轻松添加新的存储桶，只需更新 `cdk.context.json` 中的配置
+4. **缓存效率**：单一分发可以更有效地利用 CloudFront 缓存
+
+### 工作原理
+
+1. 当请求到达 CloudFront 时，它会被转发到 ECS Fargate 服务
+2. 服务会检查请求路径，提取存储桶名称（如果存在）
+3. 如果路径中包含存储桶名称，服务会设置相应的 `x-bucket` 头
+4. 服务根据 `x-bucket` 头选择正确的 S3 存储桶进行图像处理
+5. 处理后的图像通过 CloudFront 返回给客户端并缓存
 
 ## 故障排除
 
@@ -182,6 +183,14 @@ https://YOUR_CLOUDFRONT_DOMAIN/example.jpg?x-oss-process=image/resize,w_300,h_20
 ### 网络连接问题
 
 如果在构建过程中遇到网络错误，请确保您的网络连接稳定，并且可以访问 Alpine Linux 软件包仓库。
+
+### 存储桶访问问题
+
+如果遇到存储桶访问问题，请检查：
+
+1. 存储桶名称是否正确配置在 `cdk.context.json` 中
+2. ECS 任务角色是否有权限访问所有配置的存储桶
+3. 存储桶是否存在于指定的区域中
 
 ## 监控和管理
 
@@ -196,8 +205,12 @@ https://YOUR_CLOUDFRONT_DOMAIN/example.jpg?x-oss-process=image/resize,w_300,h_20
 ```bash
 cd infrastructure
 cdk destroy
-aws s3 rm s3://test-image-handler-bucket --recursive
-aws s3 rb s3://test-image-handler-bucket
+
+# 删除所有创建的 S3 存储桶
+aws s3 rm s3://primary-image-bucket --recursive
+aws s3 rb s3://primary-image-bucket
+aws s3 rm s3://secondary-image-bucket --recursive
+aws s3 rb s3://secondary-image-bucket
 ```
 
 ## 参考资料
