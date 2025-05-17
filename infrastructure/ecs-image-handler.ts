@@ -26,6 +26,7 @@ export class ECSImageHandler extends Construct {
     this.originRequestPolicy = new cloudfront.OriginRequestPolicy(this, 'ForwardAllQueryString', {
       originRequestPolicyName: `${cdk.Stack.of(this).stackName}-${cdk.Aws.REGION}-FwdAllQS`,
       queryStringBehavior: cloudfront.OriginRequestQueryStringBehavior.all(),
+      headerBehavior: cloudfront.OriginRequestHeaderBehavior.allowList('x-bucket'),
     });
     
     this.cachePolicy = new cloudfront.CachePolicy(this, 'CacheAllQueryString', {
