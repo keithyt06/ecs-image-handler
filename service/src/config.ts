@@ -4,6 +4,7 @@ const {
   NODE_ENV,
   BUCKET,
   SRC_BUCKET,
+  SRC_BUCKETS,
   STYLE_TABLE_NAME,
   AUTO_WEBP,
   SECRET_NAME,
@@ -19,6 +20,7 @@ export interface IConfig {
   region: string;
   isProd: boolean;
   srcBucket: string;
+  srcBuckets: string[];
   styleTableName: string;
   autoWebp: boolean;
   secretName: string;
@@ -33,11 +35,25 @@ function parseInt(s: string) {
   return Number.parseInt(s, 10);
 }
 
+// Parse comma-separated bucket list
+function parseBuckets(bucketStr?: string): string[] {
+  if (!bucketStr) return [];
+  return bucketStr.split(',').map(b => b.trim()).filter(b => b.length > 0);
+}
+
+// Get default bucket and bucket list
+const defaultBucket = BUCKET || SRC_BUCKET || 'sih-input';
+const bucketList = parseBuckets(SRC_BUCKETS);
+
+// If no buckets specified in SRC_BUCKETS, use the default bucket
+const srcBuckets = bucketList.length > 0 ? bucketList : [defaultBucket];
+
 const conf: IConfig = {
   port: 8080,
   region: REGION ?? AWS_REGION ?? 'us-west-2',
   isProd: NODE_ENV === 'production',
-  srcBucket: BUCKET || SRC_BUCKET || 'sih-input',
+  srcBucket: defaultBucket,
+  srcBuckets: srcBuckets,
   styleTableName: STYLE_TABLE_NAME || 'style-table-name',
   autoWebp: ['yes', '1', 'true'].includes((AUTO_WEBP ?? '').toLowerCase()),
   secretName: SECRET_NAME ?? 'X-Client-Authorization',

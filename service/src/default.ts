@@ -42,6 +42,26 @@ export function bufferStore(p?: string): IBufferStore {
   }
 }
 
+// Get a map of all configured S3 bucket stores
+export function getBufferStores(): Map<string, IBufferStore> {
+  const stores = new Map<string, IBufferStore>();
+  
+  if (config.isProd) {
+    // Add all configured buckets to the map
+    for (const bucket of config.srcBuckets) {
+      stores.set(bucket, new S3Store(bucket));
+    }
+    console.log(`Initialized ${stores.size} S3 bucket stores: ${Array.from(stores.keys()).join(', ')}`);
+  } else {
+    // For local development, use a single local store
+    const localPath = path.join(__dirname, '../test/fixtures');
+    stores.set('default', new LocalStore(localPath));
+    console.log(`use ${LocalStore.name} file://${localPath}`);
+  }
+  
+  return stores;
+}
+
 export function kvstore(): IKVStore {
   if (config.isProd) {
     console.log(`use ${DynamoDBStore.name}`);

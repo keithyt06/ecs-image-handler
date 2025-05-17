@@ -11,16 +11,20 @@ import { LRUCache } from 'lru-cache';
 import * as sharp from 'sharp';
 import config from './config';
 import debug from './debug';
-import { bufferStore, getProcessor, parseRequest, setMaxGifSizeMB, setMaxGifPages } from './default';
+import { bufferStore, getBufferStores, getProcessor, parseRequest, setMaxGifSizeMB, setMaxGifPages } from './default';
 import * as is from './is';
 import { IHttpHeaders, InvalidArgument } from './processor';
+import { IBufferStore } from './store';
 
 const MB = 1048576;
 
 const ssm = new SSM({ region: config.region });
 const smclient = new SecretsManager({ region: config.region });
 
+// Initialize buffer stores for all configured buckets
+const bufferStores = getBufferStores();
 const DefaultBufferStore = bufferStore();
+
 const app = new Koa();
 const router = new Router();
 const lruCache = new LRUCache<string, CacheObject>({
@@ -140,26 +144,52 @@ function errorHandler(): Koa.Middleware<Koa.DefaultState, Koa.DefaultContext, an
   };
 }
 
-function getBufferStore(ctx: Koa.ParameterizedContext) {
+function getBufferStore(ctx: Koa.ParameterizedContext): IBufferStore {
   const bucket = ctx.headers['x-bucket'];
-  if (bucket) {
-    return bufferStore(bucket.toString());
+  if (bucket && typeof bucket === 'string') {
+    // Check if we have a store for this bucket
+    const store = bufferStores.get(bucket);
+    if (store) {
+      return store;
+    }
+    
+    // If the bucket is not in our pre-configured list but is specified in the request,
+    // create a new store for it (this allows dynamic bucket access)
+    const newStore = bufferStore(bucket);
+    bufferStores.set(bucket, newStore);
+    return newStore;
   }
   return DefaultBufferStore;
 }
 
-
 async function ossprocess(ctx: Koa.ParameterizedContext, beforeGetFn?: () => void):
 Promise<{ data: any; type: string; headers: IHttpHeaders }> {
   const { uri, actions } = parseRequest(ctx.path, ctx.query);
+  
+  // 检查路径是否包含存储桶前缀，例如 /bucket-name/image.jpg
+  const pathParts = uri.split('/');
+  let actualUri = uri;
+  let bucketName = '';
+  
+  // 如果路径以存储桶名称开头，提取存储桶名称并调整实际URI
+  if (pathParts.length > 1 && config.srcBuckets.includes(pathParts[0])) {
+    bucketName = pathParts[0];
+    actualUri = uri.substring(bucketName.length + 1); // +1 是为了去掉斜杠
+    
+    // 设置 x-bucket 头，以便后续处理
+    if (!ctx.headers['x-bucket']) {
+      ctx.headers['x-bucket'] = bucketName;
+    }
+  }
+  
   const bs = getBufferStore(ctx);
   if (actions.length > 1) {
     const processor = getProcessor(actions[0]);
-    const context = await processor.newContext(uri, actions, bs);
+    const context = await processor.newContext(actualUri, actions, bs);
     const { data, type } = await processor.process(context);
     return { data, type, headers: context.headers };
   } else {
-    const { buffer, type, headers } = await bs.get(uri, beforeGetFn);
+    const { buffer, type, headers } = await bs.get(actualUri, beforeGetFn);
     return { data: buffer, type: type, headers: headers };
   }
 }
