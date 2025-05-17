@@ -23,7 +23,7 @@ cd ecs-image-handler
 
 ### 2. 配置 CDK 上下文
 
-编辑 `infrastructure/cdk.context.json` 文件，配置多个存储桶：
+编辑 `infrastructure/cdk.context.json` 文件，配置多个存储桶和部署区域：
 
 ```json
 {
@@ -37,6 +37,7 @@ cd ecs-image-handler
   "enable_cloudfront": true,
   "enable_public_alb": true,
   "use_default_vpc": "0",
+  "region": "us-west-2",  // 指定部署区域
   "env": {
     "AWS_SDK_LOAD_CONFIG": "1"
   }
@@ -45,22 +46,24 @@ cd ecs-image-handler
 
 ### 3. 创建 SSM 参数
 
+在指定的区域创建 SSM 参数：
+
 ```bash
 aws ssm put-parameter \
   --name "/ecs-image-handler/config" \
   --type "String" \
   --value '{"max_gif_size_mb": 10, "max_gif_pages": 200}' \
-  --region us-east-1 \
+  --region us-west-2 \  # 使用您指定的区域
   --overwrite
 ```
 
 ### 4. 创建 S3 存储桶
 
-为配置中的每个存储桶创建 S3 存储桶：
+为配置中的每个存储桶创建 S3 存储桶（在指定区域）：
 
 ```bash
-aws s3 mb s3://primary-image-bucket --region us-east-1
-aws s3 mb s3://secondary-image-bucket --region us-east-1
+aws s3 mb s3://primary-image-bucket --region us-west-2
+aws s3 mb s3://secondary-image-bucket --region us-west-2
 ```
 
 ### 5. 安装依赖项
@@ -77,9 +80,11 @@ npm install --legacy-peer-deps
 
 ### 6. 引导 CDK
 
+在指定区域引导 CDK：
+
 ```bash
 cd ../infrastructure
-cdk bootstrap aws://YOUR_ACCOUNT_ID/us-east-1
+cdk bootstrap aws://YOUR_ACCOUNT_ID/us-west-2  # 使用您指定的区域
 ```
 
 将 `YOUR_ACCOUNT_ID` 替换为您的 AWS 账户 ID。
@@ -97,23 +102,33 @@ cdk deploy --require-approval never
 将测试图像上传到您配置的每个存储桶：
 
 ```bash
-aws s3 cp ../service/test/fixtures/example.jpg s3://primary-image-bucket/ --region us-east-1
-aws s3 cp ../service/test/fixtures/example.jpg s3://secondary-image-bucket/ --region us-east-1
+aws s3 cp ../service/test/fixtures/example.jpg s3://primary-image-bucket/ --region us-west-2
+aws s3 cp ../service/test/fixtures/example.jpg s3://secondary-image-bucket/ --region us-west-2
 ```
+
+## 多区域部署
+
+ECS Image Handler 支持部署到任何 AWS 区域。要在特定区域部署，请按照以下步骤操作：
+
+1. 在 `cdk.context.json` 中添加 `"region": "your-region-code"`
+2. 修改 `app.ts` 以使用上下文中指定的区域（已在代码中实现）
+3. 确保在指定区域创建所有必要的资源（S3 存储桶、SSM 参数等）
+4. 在指定区域引导 CDK：`cdk bootstrap aws://YOUR_ACCOUNT_ID/your-region-code`
+5. 部署堆栈：`cdk deploy`
 
 ## 测试部署
 
 部署完成后，您将获得以下输出：
 
-- CloudFront 分发 URL (例如: `https://d2qvdkbt8bw2xk.cloudfront.net`)
-- 负载均衡器 URL (例如: `http://ecs-im-ECSIm-X7zuCTm6xond-6584781.us-east-1.elb.amazonaws.com`)
+- CloudFront 分发 URL (例如: `https://d3at10zr2ok7pn.cloudfront.net`)
+- 负载均衡器 URL (例如: `http://ecs-im-ECSIm-0eFv5yh0Jd81-1058978694.us-west-2.elb.amazonaws.com`)
 - DynamoDB 样式表名称
 
 ### 测试图像处理功能
 
 #### 通过 CloudFront 访问多个存储桶中的图像
 
-ECS Image Handler 现在支持通过单个 CloudFront 分发访问多个 S3 存储桶中的图像。有两种方式可以指定要访问的存储桶：
+ECS Image Handler 支持通过单个 CloudFront 分发访问多个 S3 存储桶中的图像。有两种方式可以指定要访问的存储桶：
 
 1. **通过路径前缀指定存储桶**（推荐用于 CloudFront 访问）：
 
@@ -192,6 +207,14 @@ ECS Image Handler 使用单个 CloudFront 分发来支持多个 S3 存储桶，�
 2. ECS 任务角色是否有权限访问所有配置的存储桶
 3. 存储桶是否存在于指定的区域中
 
+### 区域特定问题
+
+如果在特定区域部署时遇到问题：
+
+1. 确保在该区域创建了所有必要的资源
+2. 检查该区域是否支持所有使用的服务
+3. 确保 CDK 已在该区域正确引导
+
 ## 监控和管理
 
 - 使用 CloudWatch 查看 ECS 服务日志
@@ -207,10 +230,10 @@ cd infrastructure
 cdk destroy
 
 # 删除所有创建的 S3 存储桶
-aws s3 rm s3://primary-image-bucket --recursive
-aws s3 rb s3://primary-image-bucket
-aws s3 rm s3://secondary-image-bucket --recursive
-aws s3 rb s3://secondary-image-bucket
+aws s3 rm s3://primary-image-bucket --recursive --region us-west-2
+aws s3 rb s3://primary-image-bucket --region us-west-2
+aws s3 rm s3://secondary-image-bucket --recursive --region us-west-2
+aws s3 rb s3://secondary-image-bucket --region us-west-2
 ```
 
 ## 参考资料

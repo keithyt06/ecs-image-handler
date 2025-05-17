@@ -1,7 +1,7 @@
 {
   "buckets": [
-    "new-ue1-img",
-    "new-ue1-img2"
+    "new-uw2-img",
+    "new-uw2-img2"
   ],
   "config_json_parameter_name": "/ecs-image-handler/config",
   "ecs_desired_count": 2,
@@ -9,15 +9,14 @@
   "enable_cloudfront": true,
   "enable_public_alb": true,
   "use_default_vpc": "0",
+  "region": "us-west-2",
   "env": {
     "AWS_SDK_LOAD_CONFIG": "1"
   },
-  "availability-zones:account=057313215210:region=us-east-1": [
-    "us-east-1a",
-    "us-east-1b",
-    "us-east-1c",
-    "us-east-1d",
-    "us-east-1e",
-    "us-east-1f"
+  "availability-zones:account=057313215210:region=us-west-2": [
+    "us-west-2a",
+    "us-west-2b",
+    "us-west-2c",
+    "us-west-2d"
   ]
 }
