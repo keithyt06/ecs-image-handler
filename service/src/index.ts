@@ -166,30 +166,15 @@ async function ossprocess(ctx: Koa.ParameterizedContext, beforeGetFn?: () => voi
 Promise<{ data: any; type: string; headers: IHttpHeaders }> {
   const { uri, actions } = parseRequest(ctx.path, ctx.query);
   
-  // 检查路径是否包含存储桶前缀，例如 /bucket-name/image.jpg
-  const pathParts = uri.split('/');
-  let actualUri = uri;
-  let bucketName = '';
-  
-  // 如果路径以存储桶名称开头，提取存储桶名称并调整实际URI
-  if (pathParts.length > 1 && config.srcBuckets.includes(pathParts[0])) {
-    bucketName = pathParts[0];
-    actualUri = uri.substring(bucketName.length + 1); // +1 是为了去掉斜杠
-    
-    // 设置 x-bucket 头，以便后续处理
-    if (!ctx.headers['x-bucket']) {
-      ctx.headers['x-bucket'] = bucketName;
-    }
-  }
-  
+  // 只通过 x-bucket 头选择存储桶，不再解析路径
   const bs = getBufferStore(ctx);
   if (actions.length > 1) {
     const processor = getProcessor(actions[0]);
-    const context = await processor.newContext(actualUri, actions, bs);
+    const context = await processor.newContext(uri, actions, bs);
     const { data, type } = await processor.process(context);
     return { data, type, headers: context.headers };
   } else {
-    const { buffer, type, headers } = await bs.get(actualUri, beforeGetFn);
+    const { buffer, type, headers } = await bs.get(uri, beforeGetFn);
     return { data: buffer, type: type, headers: headers };
   }
 }

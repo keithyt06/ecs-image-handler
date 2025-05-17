@@ -130,11 +130,10 @@ export class ECSImageHandler extends Construct {
 
     // 创建单个CloudFront分发支持多个存储桶
     if (this.getEnableCloudFront()) {
-      // 创建一个包含所有存储桶的源组
-      const originGroups: cloudfront.IOrigin[] = [];
-      const originPathPatterns: Record<string, string[]> = {};
+      // 创建S3源的OAI
+      const s3OAIs: Record<string, cloudfront.OriginAccessIdentity> = {};
       
-      // 为每个存储桶创建一个源组
+      // 为每个存储桶创建OAI并设置权限
       buckets.forEach((bkt, index) => {
         const bktoai = new cloudfront.OriginAccessIdentity(this, `S3Origin${index}`, {
           comment: `Identity for s3://${bkt.bucketName}`,
@@ -147,43 +146,38 @@ export class ECSImageHandler extends Construct {
         });
         
         bkt.addToResourcePolicy(bktplcy);
-        
-        // 创建源组
-        const originGroup = new origins.OriginGroup({
-          primaryOrigin: new origins.LoadBalancerV2Origin(
-            albFargateService.loadBalancer,
-            {
-              protocolPolicy: cloudfront.OriginProtocolPolicy.HTTP_ONLY,
-              customHeaders: {
-                'x-bucket': bkt.bucketName,
-              },
-            }),
-          fallbackOrigin: new origins.S3Origin(
-            bkt,
-            {
-              originAccessIdentity: bktoai,
-            }),
-          fallbackStatusCodes: [403],
-        });
-        
-        originGroups.push(originGroup);
-        
-        // 如果不是第一个存储桶，为其创建路径模式
-        if (index > 0) {
-          originPathPatterns[`/${bkt.bucketName}/*`] = [bkt.bucketName];
+        s3OAIs[bkt.bucketName] = bktoai;
+      });
+      
+      // 创建单个源组，使用ALB作为主要源站，第一个S3桶作为备用源站
+      const primaryOrigin = new origins.LoadBalancerV2Origin(
+        albFargateService.loadBalancer,
+        {
+          protocolPolicy: cloudfront.OriginProtocolPolicy.HTTP_ONLY,
+          // 不设置默认的x-bucket头，由客户端请求提供
         }
+      );
+      
+      // 创建源组
+      const originGroup = new origins.OriginGroup({
+        primaryOrigin: primaryOrigin,
+        fallbackOrigin: new origins.S3Origin(
+          buckets[0],
+          {
+            originAccessIdentity: s3OAIs[buckets[0].bucketName],
+          }),
+        fallbackStatusCodes: [403],
       });
       
       // 创建单个分发
       const distribution = new cloudfront.Distribution(this, 'Distribution', {
         comment: `${cdk.Stack.of(this).stackName} distribution`,
         defaultBehavior: {
-          origin: originGroups[0], // 第一个存储桶作为默认源
+          origin: originGroup,
           viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
           originRequestPolicy: this.originRequestPolicy,
           cachePolicy: this.cachePolicy,
         },
-        additionalBehaviors: this.createAdditionalBehaviors(originGroups, originPathPatterns),
         errorResponses: [
           { httpStatus: 500, ttl: cdk.Duration.seconds(10) },
           { httpStatus: 501, ttl: cdk.Duration.seconds(10) },
@@ -198,37 +192,7 @@ export class ECSImageHandler extends Construct {
     }
   }
 
-  private createAdditionalBehaviors(origins: cloudfront.IOrigin[], pathPatterns: Record<string, string[]>): Record<string, cloudfront.BehaviorOptions> {
-    const behaviors: Record<string, cloudfront.BehaviorOptions> = {};
-    
-    // 为每个路径模式创建行为
-    Object.entries(pathPatterns).forEach(([pathPattern, bucketNames]) => {
-      if (bucketNames.length > 0) {
-        // 找到对应的源索引
-        const bucketName = bucketNames[0];
-        const originIndex = this.findOriginIndexByBucketName(origins, bucketName);
-        
-        if (originIndex >= 0) {
-          behaviors[pathPattern] = {
-            origin: origins[originIndex],
-            viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-            originRequestPolicy: this.originRequestPolicy,
-            cachePolicy: this.cachePolicy,
-          };
-        }
-      }
-    });
-    
-    return behaviors;
-  }
-  
-  private findOriginIndexByBucketName(origins: cloudfront.IOrigin[], bucketName: string): number {
-    // 这个方法在实际使用中可能需要更复杂的逻辑来匹配源和存储桶名称
-    // 简单起见，我们假设源的索引与存储桶的索引相同
-    const buckets: string[] = this.node.tryGetContext('buckets');
-    return buckets.findIndex(bkt => bkt === bucketName);
-  }
-
+  // 移除不再需要的方法
   private cfnOutput(id: string, value: string, description?: string) {
     const o = new cdk.CfnOutput(this, id, { value, description });
     o.overrideLogicalId(id);

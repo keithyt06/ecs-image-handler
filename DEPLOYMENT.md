@@ -126,24 +126,22 @@ ECS Image Handler 支持部署到任何 AWS 区域。要在特定区域部署，
 
 ### 测试图像处理功能
 
-#### 通过 CloudFront 访问多个存储桶中的图像
+#### 通过 CloudFront 访问图像
 
-ECS Image Handler 支持通过单个 CloudFront 分发访问多个 S3 存储桶中的图像。有两种方式可以指定要访问的存储桶：
-
-1. **通过路径前缀指定存储桶**（推荐用于 CloudFront 访问）：
-
-```
-# 访问默认存储桶（第一个配置的存储桶）中的图像
-https://YOUR_CLOUDFRONT_DOMAIN/example.jpg?x-oss-process=image/resize,w_300,h_200
-
-# 访问指定存储桶中的图像
-https://YOUR_CLOUDFRONT_DOMAIN/secondary-image-bucket/example.jpg?x-oss-process=image/resize,w_300,h_200
-```
-
-2. **通过 HTTP 头指定存储桶**（适用于直接访问 ALB）：
+要访问和处理图像，需要使用 `x-bucket` 头指定存储桶：
 
 ```bash
-curl -H "x-bucket: secondary-image-bucket" "http://YOUR_ALB_DOMAIN/example.jpg?x-oss-process=image/resize,w_300,h_200"
+# 使用 curl 访问 CloudFront 分发，指定存储桶
+curl -H "x-bucket: primary-image-bucket" "https://YOUR_CLOUDFRONT_DOMAIN/example.jpg?x-oss-process=image/resize,w_300,h_200" -o resized-image.jpg
+```
+
+> **注意**: 由于 CloudFront 默认不会转发 `x-bucket` 头，您需要通过 ALB 直接访问或配置 CloudFront 转发此头部。
+
+#### 通过 ALB 直接访问
+
+```bash
+# 使用 curl 直接访问 ALB，指定存储桶
+curl -H "x-bucket: secondary-image-bucket" "http://YOUR_ALB_DOMAIN/example.jpg?x-oss-process=image/resize,w_300,h_200" -o resized-image.jpg
 ```
 
 #### 支持的图像处理操作
@@ -151,43 +149,36 @@ curl -H "x-bucket: secondary-image-bucket" "http://YOUR_ALB_DOMAIN/example.jpg?x
 ##### 调整大小
 
 ```
-https://YOUR_CLOUDFRONT_DOMAIN/example.jpg?x-oss-process=image/resize,w_300,h_200
+http://YOUR_ALB_DOMAIN/example.jpg?x-oss-process=image/resize,w_300,h_200
 ```
 
 ##### 转换格式
 
 ```
-https://YOUR_CLOUDFRONT_DOMAIN/example.jpg?x-oss-process=image/format,webp
+http://YOUR_ALB_DOMAIN/example.jpg?x-oss-process=image/format,webp
 ```
 
 ##### 调整质量
 
 ```
-https://YOUR_CLOUDFRONT_DOMAIN/example.jpg?x-oss-process=image/quality,q_80
+http://YOUR_ALB_DOMAIN/example.jpg?x-oss-process=image/quality,q_80
 ```
 
 ##### 组合多个转换
 
 ```
-https://YOUR_CLOUDFRONT_DOMAIN/example.jpg?x-oss-process=image/resize,w_300,h_200/quality,q_80/format,webp
+http://YOUR_ALB_DOMAIN/example.jpg?x-oss-process=image/resize,w_300,h_200/quality,q_80/format,webp
 ```
 
 ## 多存储桶架构
 
-ECS Image Handler 使用单个 CloudFront 分发来支持多个 S3 存储桶，具有以下优势：
-
-1. **简化管理**：只需管理一个 CloudFront 分发，而不是为每个存储桶创建单独的分发
-2. **统一域名**：所有图片都通过同一个域名访问，只是路径不同
-3. **灵活性**：可以轻松添加新的存储桶，只需更新 `cdk.context.json` 中的配置
-4. **缓存效率**：单一分发可以更有效地利用 CloudFront 缓存
+ECS Image Handler 使用单个 CloudFront 分发来支持多个 S3 存储桶，通过 `x-bucket` 头来指定要访问的存储桶。
 
 ### 工作原理
 
-1. 当请求到达 CloudFront 时，它会被转发到 ECS Fargate 服务
-2. 服务会检查请求路径，提取存储桶名称（如果存在）
-3. 如果路径中包含存储桶名称，服务会设置相应的 `x-bucket` 头
-4. 服务根据 `x-bucket` 头选择正确的 S3 存储桶进行图像处理
-5. 处理后的图像通过 CloudFront 返回给客户端并缓存
+1. 当请求到达 ALB 时，服务会检查 `x-bucket` 头
+2. 根据 `x-bucket` 头选择正确的 S3 存储桶进行图像处理
+3. 处理后的图像返回给客户端
 
 ## 故障排除
 
@@ -206,6 +197,7 @@ ECS Image Handler 使用单个 CloudFront 分发来支持多个 S3 存储桶，�
 1. 存储桶名称是否正确配置在 `cdk.context.json` 中
 2. ECS 任务角色是否有权限访问所有配置的存储桶
 3. 存储桶是否存在于指定的区域中
+4. 请求中是否正确设置了 `x-bucket` 头
 
 ### 区域特定问题
 
