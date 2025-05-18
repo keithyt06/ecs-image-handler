@@ -128,16 +128,34 @@ ECS Image Handler 支持部署到任何 AWS 区域。要在特定区域部署，
 
 #### 通过 CloudFront 访问图像
 
-要访问和处理图像，需要使用 `x-bucket` 头指定存储桶：
+您可以通过以下两种方式访问和处理图像：
+
+1. **使用默认存储桶**（不需要指定 `x-bucket` 头）：
+
+```bash
+# 使用默认存储桶访问 CloudFront 分发
+curl "https://YOUR_CLOUDFRONT_DOMAIN/example.jpg?x-oss-process=image/resize,w_300,h_200" -o resized-image.jpg
+```
+
+2. **指定特定存储桶**（使用 `x-bucket` 头）：
 
 ```bash
 # 使用 curl 访问 CloudFront 分发，指定存储桶
 curl -H "x-bucket: primary-image-bucket" "https://YOUR_CLOUDFRONT_DOMAIN/example.jpg?x-oss-process=image/resize,w_300,h_200" -o resized-image.jpg
 ```
 
-> **注意**: 由于 CloudFront 默认不会转发 `x-bucket` 头，您需要通过 ALB 直接访问或配置 CloudFront 转发此头部。
+> **注意**: 由于 CloudFront 默认不会转发 `x-bucket` 头，您需要配置 CloudFront 转发此头部，或通过 ALB 直接访问。
 
 #### 通过 ALB 直接访问
+
+1. **使用默认存储桶**：
+
+```bash
+# 使用默认存储桶直接访问 ALB
+curl "http://YOUR_ALB_DOMAIN/example.jpg?x-oss-process=image/resize,w_300,h_200" -o resized-image.jpg
+```
+
+2. **指定特定存储桶**：
 
 ```bash
 # 使用 curl 直接访问 ALB，指定存储桶
@@ -172,13 +190,37 @@ http://YOUR_ALB_DOMAIN/example.jpg?x-oss-process=image/resize,w_300,h_200/qualit
 
 ## 多存储桶架构
 
-ECS Image Handler 使用单个 CloudFront 分发来支持多个 S3 存储桶，通过 `x-bucket` 头来指定要访问的存储桶。
+ECS Image Handler 支持多个 S3 存储桶，通过以下方式实现：
+
+1. **默认存储桶**：在 `cdk.context.json` 中配置的第一个存储桶被设置为默认存储桶
+2. **指定存储桶**：通过 `x-bucket` 请求头指定要使用的存储桶
 
 ### 工作原理
 
-1. 当请求到达 ALB 时，服务会检查 `x-bucket` 头
-2. 根据 `x-bucket` 头选择正确的 S3 存储桶进行图像处理
-3. 处理后的图像返回给客户端
+1. 当请求到达服务时，系统会检查是否存在 `x-bucket` 头
+2. 如果存在 `x-bucket` 头，则使用指定的存储桶
+3. 如果不存在 `x-bucket` 头，则使用默认存储桶
+4. 从选定的存储桶获取图像并进行处理
+5. 处理后的图像返回给客户端
+
+### 配置多存储桶
+
+在 `cdk.context.json` 中配置多个存储桶：
+
+```json
+{
+  "buckets": [
+    "default-bucket",  // 第一个存储桶将作为默认存储桶
+    "secondary-bucket",
+    "tertiary-bucket"
+  ],
+  // 其他配置...
+}
+```
+
+部署后，ECS 任务将配置环境变量：
+- `SRC_BUCKET`: 设置为第一个存储桶（默认存储桶）
+- `SRC_BUCKETS`: 设置为所有配置的存储桶列表
 
 ## 故障排除
 
@@ -197,7 +239,8 @@ ECS Image Handler 使用单个 CloudFront 分发来支持多个 S3 存储桶，�
 1. 存储桶名称是否正确配置在 `cdk.context.json` 中
 2. ECS 任务角色是否有权限访问所有配置的存储桶
 3. 存储桶是否存在于指定的区域中
-4. 请求中是否正确设置了 `x-bucket` 头
+4. 如果使用非默认存储桶，请求中是否正确设置了 `x-bucket` 头
+5. 如果通过 CloudFront 使用 `x-bucket` 头，确保 CloudFront 已配置为转发此头部
 
 ### 区域特定问题
 
