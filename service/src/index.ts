@@ -362,8 +362,8 @@ Promise<{ data: any; type: string; headers: IHttpHeaders }> {
     
     return { data, type, headers };
   } else {
-    // 获取原图
-    const { buffer, type: originalType, headers } = await bs.get(uri, beforeGetFn);
+    // 获取原图，只使用originalType，避免未使用变量警告
+    const { type: originalType } = await bs.get(uri, beforeGetFn);
     
     // 使用之前获取的acceptHeader，避免重复获取
     console.log(`原图处理: 尝试应用Accept头优化，原始格式: ${originalType}`);
