@@ -48,7 +48,17 @@ export class ImageProcessor implements IProcessor {
 
   public readonly name: string = 'image';
 
-  private constructor() { }
+  private constructor() { 
+    // 设置处理器初始化日志，便于调试
+    console.debug('ImageProcessor initialized');
+  }
+
+  // 添加优化图像处理管道的辅助方法
+  private optimizeImageProcessingPipeline(image: sharp.Sharp): sharp.Sharp {
+    // 设置更高效的处理模式
+    return image.timeout({ seconds: 60 }) // 增加超时，处理大图
+               .limitInputPixels(false);  // 允许处理大尺寸图像
+  }
 
   public setMaxGifSizeMB(value: number) {
     if (value > 0) {
@@ -106,9 +116,13 @@ export class ImageProcessor implements IProcessor {
       }
       const pages = Math.min(ctx.features[Features.LimitAnimatedFrames], metadata.pages);
       image = sharp(buffer, { failOnError: false, animated: ctx.features[Features.ReadAllAnimatedFrames], pages });
+      // 应用图像处理管道优化
+      image = this.optimizeImageProcessingPipeline(image);
       metadata = await image.metadata();
     } else {
       image = sharp(buffer, { failOnError: false, animated: ctx.features[Features.ReadAllAnimatedFrames] });
+      // 应用图像处理管道优化
+      image = this.optimizeImageProcessingPipeline(image);
       metadata = await image.metadata();
     }
     if ('gif' === metadata.format) {

@@ -36,7 +36,17 @@ const lruCache = new LRUCache<string, CacheObject>({
   },
 });
 
-sharp.cache({ items: 1000, files: 200, memory: 2000 });
+// 优化Sharp缓存设置以提高性能
+// items: 增加到3000，允许缓存更多处理过的图像
+// files: 增加到500，允许缓存更多文件描述符
+// memory: 增加到4000MB，提高大图像处理性能
+sharp.cache({ items: 3000, files: 500, memory: 4000 });
+
+// 设置Sharp并发处理限制，防止内存溢出
+sharp.concurrency(4);
+
+// 启用Sharp统计，帮助监控性能
+sharp.simd(true);
 
 app.use(logger());
 app.use(errorHandler());
@@ -170,38 +180,89 @@ function getOptimalFormat(acceptHeader: string): string {
   }
   
   // 解析Accept头，进行更精确的MIME类型匹配
+  // 示例: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8"
   const formats = acceptHeader.split(',').map(f => f.trim().toLowerCase());
+  
+  // 扩展MIME类型与格式映射
+  const mimeToFormat: {[key: string]: string} = {
+    'image/avif': 'avif',
+    'image/webp': 'webp',
+    'image/png': 'png', 
+    'image/jpeg': 'jpeg',
+    'image/jpg': 'jpeg',
+    'image/apng': 'png',
+    'image/gif': 'gif',
+    'image/svg+xml': 'svg'
+  };
   
   // 计算质量因子 (q值)，默认为1.0
   function getQuality(format: string): number {
-    const qMatch = format.match(/q=([0-9.]+)/);
-    return qMatch ? parseFloat(qMatch[1]) : 1.0;
+    // 提取分号后的参数部分
+    const params = format.split(';').slice(1);
+    // 查找q参数
+    for (const param of params) {
+      const qMatch = param.trim().match(/^q=([0-9.]+)$/);
+      if (qMatch) return parseFloat(qMatch[1]);
+    }
+    return 1.0; // 默认质量因子
   }
   
-  // 检查是否支持特定格式，并返回最高质量值
-  function getFormatQuality(keyword: string): number {
-    const matchingFormats = formats.filter(f => f.includes(keyword));
-    if (matchingFormats.length === 0) return -1;
-    return Math.max(...matchingFormats.map(getQuality));
-  }
-  
-  // 按优先级和质量因子检查支持的格式
-  const formatQualities = {
-    'webp': getFormatQuality('image/webp'),
-    'avif': getFormatQuality('image/avif'),
-    'png': getFormatQuality('image/png'),
-    'jpeg': Math.max(getFormatQuality('image/jpeg'), getFormatQuality('image/jpg'))
+  // 创建格式优先级映射，按照我们期望的优先级排序
+  const formatPriority: {[key: string]: number} = {
+    'avif': 100,
+    'webp': 90,
+    'png': 70,
+    'jpeg': 60,
+    'gif': 50,
+    'svg': 40
   };
   
-  // 某些浏览器对AVIF支持有问题，如果不是高质量支持（q>=0.9）则降级到WebP
-  if (formatQualities.avif >= 0.9) {
-    return 'avif';
-  } else if (formatQualities.webp >= 0) {
-    return 'webp';
-  } else if (formatQualities.png >= 0) {
-    return 'png';
-  } else if (formatQualities.jpeg >= 0) {
-    return 'jpeg';
+  // 收集所有格式及其质量因子和优先级
+  const formatPreferences: {format: string, quality: number, priority: number}[] = [];
+  
+  for (const formatString of formats) {
+    // 如果是通配符，跳过
+    if (formatString.includes('*/*')) continue;
+    
+    // 获取基本MIME类型
+    const baseMime = formatString.split(';')[0].trim();
+    const format = mimeToFormat[baseMime];
+    
+    // 如果是我们支持的图像格式
+    if (format) {
+      const quality = getQuality(formatString);
+      const priority = formatPriority[format] || 0;
+      
+      // 添加到偏好列表
+      formatPreferences.push({
+        format,
+        quality,
+        priority
+      });
+    }
+  }
+  
+  // 对格式按优先级和质量排序
+  formatPreferences.sort((a, b) => {
+    // 首先按优先级排序
+    if (a.priority !== b.priority) {
+      return b.priority - a.priority;
+    }
+    // 然后按质量排序
+    return b.quality - a.quality;
+  });
+  
+  // 返回最佳格式，如果没有匹配则返回空字符串
+  if (formatPreferences.length > 0) {
+    // 特殊处理 AVIF：只有当质量因子足够高时才使用
+    if (formatPreferences[0].format === 'avif' && formatPreferences[0].quality < 0.9) {
+      // 查找第二优先级的格式
+      for (const pref of formatPreferences) {
+        if (pref.format === 'webp') return 'webp';
+      }
+    }
+    
+    return formatPreferences[0].format;
   }
   
   return ''; // 默认使用原始格式
