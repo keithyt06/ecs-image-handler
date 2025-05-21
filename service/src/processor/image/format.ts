@@ -91,12 +91,13 @@ export class FormatAction extends BaseImageAction {
       ctx.headers['Content-Disposition'] = 'inline';
     } else if (opt.format === 'avif') {
       ctx.metadata.format = 'avif';
-      // 使用最兼容的AVIF配置
+      // 使用最佳兼容性的AVIF配置
       ctx.image.avif({ 
-        effort: 2,  // 进一步降低压缩级别提高兼容性 (0-9)
-        quality: config.defaultQuality.avif || 75,  // AVIF默认质量调整
-        chromaSubsampling: '4:2:0',  // 使用更标准的色度子采样以提高兼容性
-        lossless: false  // 使用有损压缩以获得更好的压缩率
+        effort: 1,  // 最低压缩级别，最高兼容性 (0-9)
+        quality: config.defaultQuality.avif || 60,  // 更保守的默认质量
+        chromaSubsampling: '4:2:0',  // 标准色度子采样
+        lossless: false,  // 使用有损压缩
+        speed: 8  // 更快速度，减少复杂性
       });
       
       // 确保设置正确的AVIF MIME类型，防止被误认为HEIF

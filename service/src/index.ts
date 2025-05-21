@@ -211,25 +211,43 @@ async function ossprocess(ctx: Koa.ParameterizedContext, beforeGetFn?: () => voi
 Promise<{ data: any; type: string; headers: IHttpHeaders }> {
   const { uri, actions } = parseRequest(ctx.path, ctx.query);
   
-  // 添加Accept头处理
-  const acceptHeader = ctx.get('Accept');
-  const optimalFormat = getOptimalFormat(acceptHeader);
-  
   // 检查是否已指定format操作
   let hasFormat = false;
+  let hasQuality = false;
+  
   for (const action of actions) {
     const params = action.split(',');
     if (params[0] === 'format') {
       hasFormat = true;
-      break;
+    } else if (params[0] === 'quality') {
+      hasQuality = true;
     }
   }
   
-  // 如果没有指定format且有最优格式，添加format操作
-  // 只有在有其他操作时（例如resize）才添加format操作，保留原图访问能力
-  if (!hasFormat && optimalFormat && actions.length > 0) {
-    actions.push(`format,${optimalFormat}`);
-    console.log(`基于Accept头添加format操作: ${optimalFormat}`);
+  // 只有在有其他操作时（例如resize）才添加format和quality操作，确保原图访问能力
+  if (actions.length > 0) {
+    // 添加Accept头处理
+    const acceptHeader = ctx.get('Accept');
+    const optimalFormat = getOptimalFormat(acceptHeader);
+    
+    // 如果没有指定format且有最优格式，添加format操作
+    if (!hasFormat && optimalFormat) {
+      actions.push(`format,${optimalFormat}`);
+      console.log(`基于Accept头添加format操作: ${optimalFormat}`);
+    }
+    
+    // 如果没有指定quality，添加默认质量参数
+    if (!hasQuality) {
+      // 默认质量参数根据格式不同
+      let defaultQuality = 80;
+      if (optimalFormat === 'avif') defaultQuality = 60;
+      if (optimalFormat === 'webp') defaultQuality = 80;
+      if (optimalFormat === 'jpeg' || optimalFormat === 'jpg') defaultQuality = 85;
+      if (optimalFormat === 'png') defaultQuality = 90;
+      
+      actions.push(`quality,q_${defaultQuality}`);
+      console.log(`添加默认质量参数: ${defaultQuality}`);
+    }
   }
   
   // 只通过 x-bucket 头选择存储桶，不再解析路径

@@ -166,7 +166,24 @@ export class ImageProcessor implements IProcessor {
 
     if (nothing2do && (!ctx.features[Features.AutoWebp])) {
       const { buffer } = await ctx.bufferStore.get(ctx.uri);
+      
+      // 确保即使直接返回原图也设置正确的响应头
+      ctx.headers['Content-Type'] = getMimeType(ctx.metadata.format!);
+      ctx.headers['Content-Disposition'] = 'inline'; // 强制浏览器显示而非下载
+      
       return { data: buffer, type: ctx.metadata.format! };
+    }
+    
+    // 辅助函数 - 获取MIME类型
+    function getMimeType(type: string): string {
+      // 处理常见图像格式
+      if (type === 'jpeg' || type === 'jpg') return 'image/jpeg';
+      if (type === 'png') return 'image/png';
+      if (type === 'webp') return 'image/webp';
+      if (type === 'avif') return 'image/avif';
+      if (type === 'gif') return 'image/gif';
+      if (type.includes('/')) return type;
+      return `image/${type}`;
     }
 
     for (const action of enabledActions) {
