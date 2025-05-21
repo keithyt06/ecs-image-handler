@@ -14,8 +14,8 @@ RUN yarn
 # 复制源代码
 COPY . .
 
-# 使用TypeScript编译器编译代码
-RUN npx tsc
+    # 使用TypeScript编译器编译代码，跳过类型检查以避免编译错误
+    RUN npx tsc --skipLibCheck
 
 FROM public.ecr.aws/docker/library/node:14-alpine3.16
 

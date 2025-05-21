@@ -56,8 +56,8 @@ export class ImageProcessor implements IProcessor {
   // 添加优化图像处理管道的辅助方法
   private optimizeImageProcessingPipeline(image: sharp.Sharp): sharp.Sharp {
     // 设置更高效的处理模式
-    return image.timeout({ seconds: 60 }) // 增加超时，处理大图
-               .limitInputPixels(false);  // 允许处理大尺寸图像
+    return image.timeout({ seconds: 60 }); // 增加超时，处理大图
+    // 注意: limitInputPixels 在当前Sharp版本中不可用
   }
 
   public setMaxGifSizeMB(value: number) {
