@@ -98,11 +98,14 @@ function processImParam(imParam: string): string[] {
       }
     }
     
-    // 使用m_lfit参数，按原图宽高比缩放，优先按宽为准
-    // 只有当宽高都指定时才添加此参数
-    if (width && height) {
-      resizeParams.push('m_lfit');
+    // 验证必填参数
+    if (!width || !height) {
+      throw new InvalidArgument('Resize操作需要同时指定width和height参数');
     }
+    
+    // 默认使用m_fixed模式，确保尺寸参数一定生效
+    // 也可以使用m_lfit保持宽高比
+    resizeParams.push('m_fixed');
     
     result.push(resizeParams.join(','));
     

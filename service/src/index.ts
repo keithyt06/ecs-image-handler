@@ -234,13 +234,21 @@ Promise<{ data: any; type: string; headers: IHttpHeaders }> {
     // 直接访问原图
     const { buffer, type, headers } = await bs.get(uri, beforeGetFn);
     
-    // 确保原图也有正确的Content-Type
+    // 确保原图也有正确的Content-Type和直接显示指令
     const enhancedHeaders: IHttpHeaders = {
       ...headers,
       'Content-Type': getMimeType(type),
+      'Content-Disposition': 'inline', // 明确指示浏览器显示而非下载
       'Cache-Control': 'public, max-age=31536000',
-      'Access-Control-Allow-Origin': '*'
+      'Access-Control-Allow-Origin': '*',
+      'Vary': 'Accept' // 允许基于Accept头的缓存变化
     };
+    
+    // 检查文件扩展名，确保与实际内容类型匹配
+    const fileExt = uri.split('.').pop()?.toLowerCase();
+    if (fileExt && fileExt !== type.toLowerCase()) {
+      console.log(`文件扩展名 ${fileExt} 与内容类型 ${type} 不匹配，设置正确的Content-Type: ${getMimeType(type)}`);
+    }
     
     return { data: buffer, type, headers: enhancedHeaders };
   }
@@ -254,6 +262,8 @@ function getMimeType(type: string): string {
   if (type === 'webp') return 'image/webp';
   if (type === 'avif') return 'image/avif';
   if (type === 'gif') return 'image/gif';
+  if (type === 'tiff' || type === 'tif') return 'image/tiff';
+  if (type === 'svg') return 'image/svg+xml';
   
   // 如果已经是完整的MIME类型，直接返回
   if (type.includes('/')) return type;

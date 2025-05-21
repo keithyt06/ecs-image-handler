@@ -49,6 +49,7 @@ export class FormatAction extends BaseImageAction {
 
     const opt = this.validate(params);
     if ('gif' === opt.format) {
+      ctx.headers['Content-Type'] = 'image/gif';
       return; // nothing to do
     }
     
@@ -64,6 +65,7 @@ export class FormatAction extends BaseImageAction {
       
       // 在headers中设置正确的Content-Type
       ctx.headers['Content-Type'] = 'image/jpeg';
+      ctx.headers['Content-Disposition'] = 'inline';
     } else if (opt.format === 'png') {
       ctx.metadata.format = 'png';
       ctx.image.png({ 
@@ -74,33 +76,37 @@ export class FormatAction extends BaseImageAction {
       });
       
       ctx.headers['Content-Type'] = 'image/png';
+      ctx.headers['Content-Disposition'] = 'inline';
     } else if (opt.format === 'webp') {
       ctx.metadata.format = 'webp';
       ctx.image.webp({ 
-        effort: 6,  // 增加压缩效率
+        effort: 4,  // 平衡压缩效率和速度
         quality: config.defaultQuality.webp,
         alphaQuality: 100,  // 保持透明度质量
         smartSubsample: true  // 智能色度子采样
       });
       
       ctx.headers['Content-Type'] = 'image/webp';
+      ctx.headers['Content-Disposition'] = 'inline';
     } else if (opt.format === 'avif') {
       ctx.metadata.format = 'avif';
-      // 使用最佳AVIF配置
+      // 使用适当的AVIF配置
       ctx.image.avif({ 
-        effort: 6,  // 平衡速度和质量 (0-9)
-        quality: config.defaultQuality.avif || 75,  // AVIF默认质量调整
-        chromaSubsampling: '4:4:4',  // 提高颜色精度
+        effort: 4,  // 降低压缩级别提高兼容性 (0-9)
+        quality: config.defaultQuality.avif || 80,  // AVIF默认质量调整
+        chromaSubsampling: '4:2:0',  // 提高兼容性
         lossless: false  // 使用有损压缩以获得更好的压缩率
       });
       
-      // 确保设置正确的AVIF MIME类型
+      // 确保设置正确的AVIF MIME类型，防止被误认为HEIF
       ctx.headers['Content-Type'] = 'image/avif';
+      ctx.headers['Content-Disposition'] = 'inline'; // 强制浏览器显示而非下载
     }
     
     // 添加缓存和跨域头
     ctx.headers['Cache-Control'] = 'public, max-age=31536000';
     ctx.headers['Access-Control-Allow-Origin'] = '*';
+    ctx.headers['Vary'] = 'Accept'; // 表明响应根据Accept头变化
   }
 }
 
