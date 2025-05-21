@@ -97,13 +97,28 @@ export class FormatAction extends BaseImageAction {
       ctx.headers['Content-Disposition'] = 'inline';
     } else if (opt.format === 'avif') {
       ctx.metadata.format = 'avif';
-      // 使用最佳兼容性的AVIF配置
-      ctx.image.avif({ 
-        effort: 1,  // 最低压缩级别，最高兼容性 (0-9)
-        quality: config.defaultQuality.avif || 60,  // 更保守的默认质量
-        chromaSubsampling: '4:2:0',  // 标准色度子采样
-        lossless: false  // 使用有损压缩
-      });
+      
+      // 打印详细日志用于调试AVIF生成
+      console.log(`生成AVIF格式图片，质量参数: ${config.defaultQuality.avif || 60}`);
+      
+      // 使用更完善的AVIF配置
+      try {
+        ctx.image.avif({ 
+          effort: 4,  // 中等压缩级别，平衡速度和兼容性 (0-9)
+          quality: config.defaultQuality.avif || 70,  // 稍微提高质量确保兼容性
+          chromaSubsampling: '4:4:4',  // 使用更高质量的子采样
+          lossless: false  // 使用有损压缩
+        });
+        console.log("成功应用AVIF配置");
+      } catch (error) {
+        console.error(`AVIF格式配置失败: ${error}`);
+        // 如果AVIF失败，降级到WebP
+        ctx.metadata.format = 'webp';
+        ctx.image.webp({
+          quality: config.defaultQuality.webp || 80
+        });
+        console.log("AVIF失败，降级到WebP格式");
+      }
       
       // 确保设置正确的AVIF MIME类型，防止被误认为HEIF
       ctx.headers['Content-Type'] = 'image/avif';

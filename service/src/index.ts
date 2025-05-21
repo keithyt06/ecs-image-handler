@@ -254,14 +254,23 @@ function getOptimalFormat(acceptHeader: string): string {
   
   // 返回最佳格式，如果没有匹配则返回空字符串
   if (formatPreferences.length > 0) {
-    // 特殊处理 AVIF：只有当质量因子足够高时才使用
-    if (formatPreferences[0].format === 'avif' && formatPreferences[0].quality < 0.9) {
+    // 记录所有格式偏好用于调试
+    console.log(`格式偏好列表: ${JSON.stringify(formatPreferences)}`);
+    
+    // 将AVIF质量因子阈值降低，允许更多AVIF使用案例
+    if (formatPreferences[0].format === 'avif' && formatPreferences[0].quality < 0.3) {
+      console.log(`AVIF质量因子太低 (${formatPreferences[0].quality})，降级到WebP`);
       // 查找第二优先级的格式
       for (const pref of formatPreferences) {
-        if (pref.format === 'webp') return 'webp';
+        if (pref.format === 'webp') {
+          console.log(`降级选择WebP格式，质量因子: ${pref.quality}`);
+          return 'webp';
+        }
       }
     }
     
+    // 如果AVIF质量因子足够，或者最高优先级不是AVIF
+    console.log(`选择最优格式: ${formatPreferences[0].format}，质量因子: ${formatPreferences[0].quality}`);
     return formatPreferences[0].format;
   }
   
@@ -288,8 +297,14 @@ Promise<{ data: any; type: string; headers: IHttpHeaders }> {
     }
   }
   
-  // 添加Accept头处理
-  const acceptHeader = ctx.get('Accept');
+  // 添加Accept头处理 - 尝试多种方式获取Accept头
+  const acceptHeader = ctx.get('Accept') || 
+                      ctx.request.headers['accept'] || 
+                      ctx.headers['accept'] || 
+                      '';
+                      
+  // 记录完整的请求头用于调试
+  console.log(`请求的所有头: ${JSON.stringify(ctx.headers)}`);
   console.log(`请求的Accept头: ${acceptHeader}`);
   
   // 获取最佳格式
@@ -355,10 +370,12 @@ Promise<{ data: any; type: string; headers: IHttpHeaders }> {
                                  originalType.toLowerCase().includes('heic');
     
     // 如果需要格式转换，或者有Accept头指定格式
-    const acceptHeader = ctx.get('Accept');
-    const optimalFormat = getOptimalFormat(acceptHeader);
+    // 使用之前获取的acceptHeader，避免重复获取
+    console.log(`原图处理: 尝试应用Accept头优化，原始格式: ${originalType}`);
     
-    if (needsFormatConversion || optimalFormat) {
+    // 始终为原图应用格式转换，确保基于Accept头返回最佳格式
+    // 这样即使没有请求参数，也可以返回最优格式
+    if (true) { // 始终进入此逻辑，确保原图支持格式优化
       console.log(`对原图进行格式转换: ${originalType} -> ${optimalFormat || 'jpeg'}`);
       
       // 创建临时处理链
