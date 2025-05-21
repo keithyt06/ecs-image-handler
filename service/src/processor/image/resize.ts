@@ -113,14 +113,17 @@ function buildSharpOpt(ctx: IImageContext, o: ResizeOpts): sharp.ResizeOptions {
   if (!o.m || o.m === Mode.LFIT) {
     // LFIT模式: 优先按宽度调整，保持原始比例
     opt.fit = sharp.fit.inside;
+    opt.withoutEnlargement = true; // 防止图片放大
     
     // 如果同时指定了宽和高，优先以宽度为准重新计算高度
     if (opt.width && opt.height && metadata.width && metadata.height) {
       const targetRatio = opt.width / opt.height;
       const originalRatio = metadata.width / metadata.height;
       
+      // 如果比例不匹配，按宽度为基准调整高度
       if (Math.abs(targetRatio - originalRatio) > 0.01) { // 允许小误差
         opt.height = Math.round(opt.width / originalRatio);
+        console.log(`调整高度以保持原始比例: 宽度=${opt.width}, 新高度=${opt.height}`);
       }
     }
   } else if (o.m === Mode.MFIT) {

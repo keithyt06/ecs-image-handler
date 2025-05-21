@@ -98,17 +98,20 @@ function processImParam(imParam: string): string[] {
       }
     }
     
-    // 添加m_fixed参数确保宽高参数一定生效
-    resizeParams.push('m_fixed');
+    // 使用m_lfit参数，按原图宽高比缩放，优先按宽为准
+    // 只有当宽高都指定时才添加此参数
+    if (width && height) {
+      resizeParams.push('m_lfit');
+    }
     
     result.push(resizeParams.join(','));
     
-    // 添加格式处理
+    // 添加格式处理 (可选参数)
     if (format) {
       result.push(`format,${format}`);
     }
     
-    // 添加质量处理
+    // 添加质量处理 (可选参数)
     if (quality) {
       result.push(`quality,q_${quality}`);
     }

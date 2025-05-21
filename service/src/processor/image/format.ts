@@ -57,31 +57,50 @@ export class FormatAction extends BaseImageAction {
       ctx.metadata.format = 'jpeg';
       ctx.image.jpeg({ 
         quality: config.defaultQuality.jpeg,
-        mozjpeg: true  // 使用更高效的mozjpeg编码器
+        mozjpeg: true,  // 使用更高效的mozjpeg编码器
+        optimiseCoding: true,  // 优化霍夫曼编码表
+        trellisQuantisation: true  // 使用格子量化减少文件大小
       });
+      
+      // 在headers中设置正确的Content-Type
+      ctx.headers['Content-Type'] = 'image/jpeg';
     } else if (opt.format === 'png') {
       ctx.metadata.format = 'png';
       ctx.image.png({ 
-        effort: 4,  // 增加压缩效率
-        compressionLevel: 8,  // 增加压缩级别
-        adaptiveFiltering: true  // 启用自适应过滤
+        effort: 6,  // 增加压缩效率 (1-10)
+        compressionLevel: 9,  // 最大压缩级别 (0-9)
+        adaptiveFiltering: true,  // 启用自适应过滤
+        palette: false  // 对于照片类内容禁用调色板
       });
+      
+      ctx.headers['Content-Type'] = 'image/png';
     } else if (opt.format === 'webp') {
       ctx.metadata.format = 'webp';
       ctx.image.webp({ 
-        effort: 4,  // 增加压缩效率
+        effort: 6,  // 增加压缩效率
         quality: config.defaultQuality.webp,
-        alphaQuality: 100  // 保持透明度质量
+        alphaQuality: 100,  // 保持透明度质量
+        smartSubsample: true  // 智能色度子采样
       });
+      
+      ctx.headers['Content-Type'] = 'image/webp';
     } else if (opt.format === 'avif') {
       ctx.metadata.format = 'avif';
+      // 使用最佳AVIF配置
       ctx.image.avif({ 
-        effort: 4,  // 平衡速度和质量
-        quality: config.defaultQuality.avif || 80,
+        effort: 6,  // 平衡速度和质量 (0-9)
+        quality: config.defaultQuality.avif || 75,  // AVIF默认质量调整
         chromaSubsampling: '4:4:4',  // 提高颜色精度
         lossless: false  // 使用有损压缩以获得更好的压缩率
       });
+      
+      // 确保设置正确的AVIF MIME类型
+      ctx.headers['Content-Type'] = 'image/avif';
     }
+    
+    // 添加缓存和跨域头
+    ctx.headers['Cache-Control'] = 'public, max-age=31536000';
+    ctx.headers['Access-Control-Allow-Origin'] = '*';
   }
 }
 

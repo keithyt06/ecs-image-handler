@@ -208,8 +208,10 @@ Promise<{ data: any; type: string; headers: IHttpHeaders }> {
   }
   
   // 如果没有指定format且有最优格式，添加format操作
+  // 只有在有其他操作时（例如resize）才添加format操作，保留原图访问能力
   if (!hasFormat && optimalFormat && actions.length > 0) {
     actions.push(`format,${optimalFormat}`);
+    console.log(`基于Accept头添加format操作: ${optimalFormat}`);
   }
   
   // 只通过 x-bucket 头选择存储桶，不再解析路径
@@ -218,11 +220,46 @@ Promise<{ data: any; type: string; headers: IHttpHeaders }> {
     const processor = getProcessor(actions[0]);
     const context = await processor.newContext(uri, actions, bs);
     const { data, type } = await processor.process(context);
-    return { data, type, headers: context.headers };
+    
+    // 确保设置正确的Content-Type和额外头信息
+    const headers: IHttpHeaders = {
+      ...context.headers,
+      'Content-Type': getMimeType(type),
+      'Cache-Control': 'public, max-age=31536000',
+      'Access-Control-Allow-Origin': '*'
+    };
+    
+    return { data, type, headers };
   } else {
+    // 直接访问原图
     const { buffer, type, headers } = await bs.get(uri, beforeGetFn);
-    return { data: buffer, type: type, headers: headers };
+    
+    // 确保原图也有正确的Content-Type
+    const enhancedHeaders: IHttpHeaders = {
+      ...headers,
+      'Content-Type': getMimeType(type),
+      'Cache-Control': 'public, max-age=31536000',
+      'Access-Control-Allow-Origin': '*'
+    };
+    
+    return { data: buffer, type, headers: enhancedHeaders };
   }
+}
+
+// 确保返回正确的MIME类型
+function getMimeType(type: string): string {
+  // 处理常见图像格式
+  if (type === 'jpeg' || type === 'jpg') return 'image/jpeg';
+  if (type === 'png') return 'image/png';
+  if (type === 'webp') return 'image/webp';
+  if (type === 'avif') return 'image/avif';
+  if (type === 'gif') return 'image/gif';
+  
+  // 如果已经是完整的MIME类型，直接返回
+  if (type.includes('/')) return type;
+  
+  // 默认返回通用图像类型
+  return `image/${type}`;
 }
 
 async function validatePostRequest(ctx: Koa.ParameterizedContext) {

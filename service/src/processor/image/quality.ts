@@ -55,7 +55,10 @@ export class QualityAction extends BaseImageAction {
     const opt = this.validate(params);
     const metadata = ctx.metadata; // If the format is changed before.
     
-    // 确保质量参数一定生效
+    // 获取最终质量值
+    const qualityValue = opt.q ?? opt.Q ?? 80; // 默认质量为80
+    
+    // 确保质量参数一定生效，并设置正确的Content-Type
     if (JPEG === metadata.format || JPG === metadata.format) {
       let q = 72;
       if (opt.q) {
@@ -65,26 +68,46 @@ export class QualityAction extends BaseImageAction {
       } else if (opt.Q) {
         q = opt.Q;
       }
-      ctx.image.jpeg({ quality: q, mozjpeg: true });
+      ctx.image.jpeg({ 
+        quality: q, 
+        mozjpeg: true,
+        optimiseCoding: true,
+        trellisQuantisation: true
+      });
+      
+      // 确保设置正确的MIME类型
+      ctx.headers['Content-Type'] = 'image/jpeg';
     } else if (WEBP === metadata.format) {
       ctx.image.webp({ 
-        quality: (opt.q ?? opt.Q), 
-        effort: 4,
-        alphaQuality: 100 // 保持透明度质量
+        quality: qualityValue, 
+        effort: 6,
+        alphaQuality: 100, // 保持透明度质量
+        smartSubsample: true // 智能色度子采样
       });
+      
+      ctx.headers['Content-Type'] = 'image/webp';
     } else if ('avif' === metadata.format) {
       ctx.image.avif({ 
-        quality: (opt.q ?? opt.Q), 
-        effort: 4,
+        quality: qualityValue, 
+        effort: 6,
         chromaSubsampling: '4:4:4' // 提高颜色精度
       });
+      
+      ctx.headers['Content-Type'] = 'image/avif';
     } else if ('png' === metadata.format) {
       // PNG是无损的，但可以通过其他参数调整
+      const compressionLevel = Math.max(1, Math.min(9, Math.round((100 - qualityValue) / 10)));
       ctx.image.png({ 
-        compressionLevel: Math.max(1, Math.min(9, Math.round((100 - (opt.q ?? opt.Q ?? 80)) / 10))),
+        compressionLevel,
         adaptiveFiltering: true,
-        effort: 4
+        effort: 6,
+        palette: false
       });
+      
+      ctx.headers['Content-Type'] = 'image/png';
     }
+    
+    // 添加缓存控制头
+    ctx.headers['Cache-Control'] = 'public, max-age=31536000';
   }
 }
