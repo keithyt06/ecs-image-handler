@@ -365,66 +365,43 @@ Promise<{ data: any; type: string; headers: IHttpHeaders }> {
     // 获取原图
     const { buffer, type: originalType, headers } = await bs.get(uri, beforeGetFn);
     
-    // 检测是否为需要强制转换的格式
-    const needsFormatConversion = originalType.toLowerCase().includes('heif') || 
-                                 originalType.toLowerCase().includes('heic');
-    
-    // 如果需要格式转换，或者有Accept头指定格式
     // 使用之前获取的acceptHeader，避免重复获取
     console.log(`原图处理: 尝试应用Accept头优化，原始格式: ${originalType}`);
     
     // 始终为原图应用格式转换，确保基于Accept头返回最佳格式
-    // 这样即使没有请求参数，也可以返回最优格式
-    if (true) { // 始终进入此逻辑，确保原图支持格式优化
-      console.log(`对原图进行格式转换: ${originalType} -> ${optimalFormat || 'jpeg'}`);
-      
-      // 创建临时处理链
-      const tempActions = [];
-      
-      // 添加格式转换动作
-      const targetFormat = optimalFormat || 'jpeg';
-      tempActions.push(`format,${targetFormat}`);
-      
-      // 添加质量参数
-      let defaultQuality = 80;
-      if (targetFormat === 'avif') defaultQuality = 60;
-      if (targetFormat === 'webp') defaultQuality = 80;
-      if (targetFormat === 'jpeg' || targetFormat === 'jpg') defaultQuality = 85;
-      if (targetFormat === 'png') defaultQuality = 90;
-      tempActions.push(`quality,q_${defaultQuality}`);
-      
-      // 使用主处理器处理图像
-      const processor = getProcessor('image');
-      const context = await processor.newContext(uri, tempActions, bs);
-      const { data, type } = await processor.process(context);
-      
-      // 确保设置正确的Content-Type和额外头信息
-      const enhancedHeaders: IHttpHeaders = {
-        ...context.headers,
-        'Content-Type': getMimeType(type),
-        'Content-Disposition': 'inline', // 明确指示浏览器显示而非下载
-        'Cache-Control': 'public, max-age=31536000',
-        'Access-Control-Allow-Origin': '*',
-        'Vary': 'Accept' // 允许基于Accept头的缓存变化
-      };
-      
-      return { data, type, headers: enhancedHeaders };
-    } else {
-      // 原图不需要转换
-      console.log(`直接返回原图: ${originalType}`);
-      
-      // 确保原图也有正确的Content-Type和直接显示指令
-      const enhancedHeaders: IHttpHeaders = {
-        ...headers,
-        'Content-Type': getMimeType(originalType),
-        'Content-Disposition': 'inline', // 明确指示浏览器显示而非下载
-        'Cache-Control': 'public, max-age=31536000',
-        'Access-Control-Allow-Origin': '*',
-        'Vary': 'Accept' // 允许基于Accept头的缓存变化
-      };
-      
-      return { data: buffer, type: originalType, headers: enhancedHeaders };
-    }
+    console.log(`对原图进行格式转换: ${originalType} -> ${optimalFormat || 'jpeg'}`);
+    
+    // 创建临时处理链
+    const tempActions = [];
+    
+    // 添加格式转换动作
+    const targetFormat = optimalFormat || 'jpeg';
+    tempActions.push(`format,${targetFormat}`);
+    
+    // 添加质量参数
+    let defaultQuality = 80;
+    if (targetFormat === 'avif') defaultQuality = 60;
+    if (targetFormat === 'webp') defaultQuality = 80;
+    if (targetFormat === 'jpeg' || targetFormat === 'jpg') defaultQuality = 85;
+    if (targetFormat === 'png') defaultQuality = 90;
+    tempActions.push(`quality,q_${defaultQuality}`);
+    
+    // 使用主处理器处理图像
+    const processor = getProcessor('image');
+    const context = await processor.newContext(uri, tempActions, bs);
+    const { data, type } = await processor.process(context);
+    
+    // 确保设置正确的Content-Type和额外头信息
+    const enhancedHeaders: IHttpHeaders = {
+      ...context.headers,
+      'Content-Type': getMimeType(type),
+      'Content-Disposition': 'inline', // 明确指示浏览器显示而非下载
+      'Cache-Control': 'public, max-age=31536000',
+      'Access-Control-Allow-Origin': '*',
+      'Vary': 'Accept' // 允许基于Accept头的缓存变化
+    };
+    
+    return { data, type, headers: enhancedHeaders };
   }
 }
 
