@@ -41,19 +41,20 @@ sharp.cache({ items: 1000, files: 200, memory: 2000 });
 app.use(logger());
 app.use(errorHandler());
 app.use(bodyParser());
-app.use(koaCash({
-  setCachedHeader: true,
-  hash(ctx) {
-    return ctx.headers['x-bucket'] + ctx.request.url;
-  },
-  get: (key) => {
-    return Promise.resolve(lruCache.get(key));
-  },
-  set: (key, value) => {
-    lruCache.set(key, value as CacheObject);
-    return Promise.resolve();
-  },
-}));
+// 禁用缓存功能，确保根据Accept头动态生成图片格式
+// app.use(koaCash({
+//   setCachedHeader: true,
+//   hash(ctx) {
+//     return ctx.headers['x-bucket'] + ctx.request.url;
+//   },
+//   get: (key) => {
+//     return Promise.resolve(lruCache.get(key));
+//   },
+//   set: (key, value) => {
+//     lruCache.set(key, value as CacheObject);
+//     return Promise.resolve();
+//   },
+// }));
 
 router.post('/images', async (ctx) => {
   console.log('post request body=', ctx.request.body);
@@ -95,7 +96,8 @@ router.get(['/debug', '/_debug'], async (ctx) => {
 });
 
 router.get('/(.*)', async (ctx) => {
-  if (await ctx.cashed()) return;
+  // 禁用缓存检查，确保每次请求都重新处理图像
+  // if (await ctx.cashed()) return;
 
   const queue = sharp.counters().queue;
   if (queue > config.sharpQueueLimit) {
@@ -162,9 +164,54 @@ function getBufferStore(ctx: Koa.ParameterizedContext): IBufferStore {
   return DefaultBufferStore;
 }
 
+// 根据Accept头获取最优格式
+function getOptimalFormat(acceptHeader: string): string {
+  if (!acceptHeader) {
+    return ''; // 使用原始格式
+  }
+  
+  // 解析Accept头，进行更精确的MIME类型匹配
+  const formats = acceptHeader.split(',').map(f => f.trim().toLowerCase());
+  
+  // 按优先级检查支持的格式（avif > webp > 原图）
+  if (formats.some(f => f.includes('image/avif'))) {
+    return 'avif';
+  } else if (formats.some(f => f.includes('image/webp'))) {
+    return 'webp';
+  }
+  
+  // 检查其他常见格式
+  if (formats.some(f => f.includes('image/png'))) {
+    return 'png';
+  } else if (formats.some(f => f.includes('image/jpeg') || f.includes('image/jpg'))) {
+    return 'jpeg';
+  }
+  
+  return ''; // 默认使用原始格式
+}
+
 async function ossprocess(ctx: Koa.ParameterizedContext, beforeGetFn?: () => void):
 Promise<{ data: any; type: string; headers: IHttpHeaders }> {
   const { uri, actions } = parseRequest(ctx.path, ctx.query);
+  
+  // 添加Accept头处理
+  const acceptHeader = ctx.get('Accept');
+  const optimalFormat = getOptimalFormat(acceptHeader);
+  
+  // 检查是否已指定format操作
+  let hasFormat = false;
+  for (const action of actions) {
+    const params = action.split(',');
+    if (params[0] === 'format') {
+      hasFormat = true;
+      break;
+    }
+  }
+  
+  // 如果没有指定format且有最优格式，添加format操作
+  if (!hasFormat && optimalFormat && actions.length > 0) {
+    actions.push(`format,${optimalFormat}`);
+  }
   
   // 只通过 x-bucket 头选择存储桶，不再解析路径
   const bs = getBufferStore(ctx);
@@ -210,8 +257,9 @@ async function validatePostRequest(ctx: Koa.ParameterizedContext) {
 }
 
 function bypass() {
-  // NOTE: This is intended to tell CloudFront to directly access the s3 object.
-  throw new HttpErrors[403]('Please visit s3 directly');
+  // 允许直接访问原图，不再抛出异常
+  // 旧代码：throw new HttpErrors.Forbidden('Please visit s3 directly');
+  return;
 }
 
 async function getSecretFromSecretsManager() {

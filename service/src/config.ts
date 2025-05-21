@@ -29,6 +29,11 @@ export interface IConfig {
   CACHE_TTL_SEC: number;
   CACHE_MAX_ITEMS: number;
   CACHE_MAX_SIZE_MB: number;
+  defaultQuality: {
+    jpeg: number;
+    webp: number;
+    avif: number;
+  };
 }
 
 function parseInt(s: string) {
@@ -62,6 +67,11 @@ const conf: IConfig = {
   CACHE_TTL_SEC: parseInt(CACHE_TTL_SEC ?? '300'),
   CACHE_MAX_ITEMS: parseInt(CACHE_MAX_ITEMS ?? '10000'),
   CACHE_MAX_SIZE_MB: parseInt(CACHE_MAX_SIZE_MB ?? '1024'),
+  defaultQuality: {
+    jpeg: 80, 
+    webp: 80,
+    avif: 70, // AVIF默认使用略低的质量值以获得更好的压缩率
+  },
 };
 
 export default conf;

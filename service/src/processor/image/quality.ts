@@ -54,6 +54,8 @@ export class QualityAction extends BaseImageAction {
   public async process(ctx: IImageContext, params: string[]): Promise<void> {
     const opt = this.validate(params);
     const metadata = ctx.metadata; // If the format is changed before.
+    
+    // 确保质量参数一定生效
     if (JPEG === metadata.format || JPG === metadata.format) {
       let q = 72;
       if (opt.q) {
@@ -63,9 +65,26 @@ export class QualityAction extends BaseImageAction {
       } else if (opt.Q) {
         q = opt.Q;
       }
-      ctx.image.jpeg({ quality: q });
+      ctx.image.jpeg({ quality: q, mozjpeg: true });
     } else if (WEBP === metadata.format) {
-      ctx.image.webp({ quality: (opt.q ?? opt.Q) });
+      ctx.image.webp({ 
+        quality: (opt.q ?? opt.Q), 
+        effort: 4,
+        alphaQuality: 100 // 保持透明度质量
+      });
+    } else if ('avif' === metadata.format) {
+      ctx.image.avif({ 
+        quality: (opt.q ?? opt.Q), 
+        effort: 4,
+        chromaSubsampling: '4:4:4' // 提高颜色精度
+      });
+    } else if ('png' === metadata.format) {
+      // PNG是无损的，但可以通过其他参数调整
+      ctx.image.png({ 
+        compressionLevel: Math.max(1, Math.min(9, Math.round((100 - (opt.q ?? opt.Q ?? 80)) / 10))),
+        adaptiveFiltering: true,
+        effort: 4
+      });
     }
   }
 }

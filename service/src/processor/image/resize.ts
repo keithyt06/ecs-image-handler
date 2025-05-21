@@ -28,7 +28,7 @@ export class ResizeAction extends BaseImageAction {
 
   public validate(params: string[]): ReadOnly<ResizeOpts> {
     const opt: ResizeOpts = {
-      m: Mode.LFIT,
+      m: Mode.LFIT, // 默认使用LFIT模式确保保持原始宽高比
       limit: true,
       color: '#FFFFFF',
     };
@@ -103,9 +103,26 @@ function buildSharpOpt(ctx: IImageContext, o: ResizeOpts): sharp.ResizeOptions {
     withoutEnlargement: o.limit,
     background: o.color,
   };
-  // Mode
-  if (o.m === Mode.LFIT) {
+  
+  const metadata = ctx.metadata;
+  if (!(metadata.width && metadata.height)) {
+    throw new InvalidArgument('Can\'t read image\'s width and height');
+  }
+
+  // Mode 处理
+  if (!o.m || o.m === Mode.LFIT) {
+    // LFIT模式: 优先按宽度调整，保持原始比例
     opt.fit = sharp.fit.inside;
+    
+    // 如果同时指定了宽和高，优先以宽度为准重新计算高度
+    if (opt.width && opt.height && metadata.width && metadata.height) {
+      const targetRatio = opt.width / opt.height;
+      const originalRatio = metadata.width / metadata.height;
+      
+      if (Math.abs(targetRatio - originalRatio) > 0.01) { // 允许小误差
+        opt.height = Math.round(opt.width / originalRatio);
+      }
+    }
   } else if (o.m === Mode.MFIT) {
     opt.fit = sharp.fit.outside;
   } else if (o.m === Mode.FILL) {
@@ -113,11 +130,8 @@ function buildSharpOpt(ctx: IImageContext, o: ResizeOpts): sharp.ResizeOptions {
   } else if (o.m === Mode.PAD) {
     opt.fit = sharp.fit.contain;
   } else if (o.m === Mode.FIXED) {
+    // FIXED模式: 强制使用指定宽高，不保持原始比例
     opt.fit = sharp.fit.fill;
-  }
-  const metadata = ctx.metadata;
-  if (!(metadata.width && metadata.height)) {
-    throw new InvalidArgument('Can\'t read image\'s width and height');
   }
 
   if (o.p && (!o.w) && (!o.h)) {
