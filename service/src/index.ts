@@ -328,45 +328,99 @@ Promise<{ data: any; type: string; headers: IHttpHeaders }> {
     
     return { data, type, headers };
   } else {
-    // 直接访问原图
-    const { buffer, type, headers } = await bs.get(uri, beforeGetFn);
+    // 获取原图
+    const { buffer, type: originalType, headers } = await bs.get(uri, beforeGetFn);
     
-    // 确保原图也有正确的Content-Type和直接显示指令
-    const enhancedHeaders: IHttpHeaders = {
-      ...headers,
-      'Content-Type': getMimeType(type),
-      'Content-Disposition': 'inline', // 明确指示浏览器显示而非下载
-      'Cache-Control': 'public, max-age=31536000',
-      'Access-Control-Allow-Origin': '*',
-      'Vary': 'Accept' // 允许基于Accept头的缓存变化
-    };
+    // 检测是否为需要强制转换的格式
+    const needsFormatConversion = originalType.toLowerCase().includes('heif') || 
+                                 originalType.toLowerCase().includes('heic');
     
-    // 检查文件扩展名，确保与实际内容类型匹配
-    const fileExt = uri.split('.').pop()?.toLowerCase();
-    if (fileExt && fileExt !== type.toLowerCase()) {
-      console.log(`文件扩展名 ${fileExt} 与内容类型 ${type} 不匹配，设置正确的Content-Type: ${getMimeType(type)}`);
+    // 如果需要格式转换，或者有Accept头指定格式
+    const acceptHeader = ctx.get('Accept');
+    const optimalFormat = getOptimalFormat(acceptHeader);
+    
+    if (needsFormatConversion || optimalFormat) {
+      console.log(`对原图进行格式转换: ${originalType} -> ${optimalFormat || 'jpeg'}`);
+      
+      // 创建临时处理链
+      const tempActions = [];
+      
+      // 添加格式转换动作
+      const targetFormat = optimalFormat || 'jpeg';
+      tempActions.push(`format,${targetFormat}`);
+      
+      // 添加质量参数
+      let defaultQuality = 80;
+      if (targetFormat === 'avif') defaultQuality = 60;
+      if (targetFormat === 'webp') defaultQuality = 80;
+      if (targetFormat === 'jpeg' || targetFormat === 'jpg') defaultQuality = 85;
+      if (targetFormat === 'png') defaultQuality = 90;
+      tempActions.push(`quality,q_${defaultQuality}`);
+      
+      // 使用主处理器处理图像
+      const processor = getProcessor('image');
+      const context = await processor.newContext(uri, tempActions, bs);
+      const { data, type } = await processor.process(context);
+      
+      // 确保设置正确的Content-Type和额外头信息
+      const enhancedHeaders: IHttpHeaders = {
+        ...context.headers,
+        'Content-Type': getMimeType(type),
+        'Content-Disposition': 'inline', // 明确指示浏览器显示而非下载
+        'Cache-Control': 'public, max-age=31536000',
+        'Access-Control-Allow-Origin': '*',
+        'Vary': 'Accept' // 允许基于Accept头的缓存变化
+      };
+      
+      return { data, type, headers: enhancedHeaders };
+    } else {
+      // 原图不需要转换
+      console.log(`直接返回原图: ${originalType}`);
+      
+      // 确保原图也有正确的Content-Type和直接显示指令
+      const enhancedHeaders: IHttpHeaders = {
+        ...headers,
+        'Content-Type': getMimeType(originalType),
+        'Content-Disposition': 'inline', // 明确指示浏览器显示而非下载
+        'Cache-Control': 'public, max-age=31536000',
+        'Access-Control-Allow-Origin': '*',
+        'Vary': 'Accept' // 允许基于Accept头的缓存变化
+      };
+      
+      return { data: buffer, type: originalType, headers: enhancedHeaders };
     }
-    
-    return { data: buffer, type, headers: enhancedHeaders };
   }
 }
 
 // 确保返回正确的MIME类型
 function getMimeType(type: string): string {
+  // 规范化类型字符串
+  const normalizedType = type.toLowerCase();
+  
   // 处理常见图像格式
-  if (type === 'jpeg' || type === 'jpg') return 'image/jpeg';
-  if (type === 'png') return 'image/png';
-  if (type === 'webp') return 'image/webp';
-  if (type === 'avif') return 'image/avif';
-  if (type === 'gif') return 'image/gif';
-  if (type === 'tiff' || type === 'tif') return 'image/tiff';
-  if (type === 'svg') return 'image/svg+xml';
+  if (normalizedType === 'jpeg' || normalizedType === 'jpg') return 'image/jpeg';
+  if (normalizedType === 'png') return 'image/png';
+  if (normalizedType === 'webp') return 'image/webp';
+  if (normalizedType === 'avif') return 'image/avif';
+  if (normalizedType === 'gif') return 'image/gif';
+  if (normalizedType === 'tiff' || normalizedType === 'tif') return 'image/tiff';
+  if (normalizedType === 'svg') return 'image/svg+xml';
   
-  // 如果已经是完整的MIME类型，直接返回
-  if (type.includes('/')) return type;
+  // HEIF/HEIC格式强制转换为JPEG，因为浏览器支持有限
+  if (normalizedType === 'heif' || normalizedType === 'heic') return 'image/jpeg';
   
-  // 默认返回通用图像类型
-  return `image/${type}`;
+  // 如果已经是完整的MIME类型，检查是否为HEIF/HEIC
+  if (normalizedType.includes('/')) {
+    if (normalizedType.includes('heif') || normalizedType.includes('heic')) {
+      console.log(`检测到HEIF/HEIC格式，转换为JPEG: ${normalizedType}`);
+      return 'image/jpeg';
+    }
+    return normalizedType;
+  }
+  
+  // 默认返回JPEG类型，确保浏览器兼容性
+  console.log(`未知图像格式 ${normalizedType}，默认设置为JPEG`);
+  return 'image/jpeg';
 }
 
 async function validatePostRequest(ctx: Koa.ParameterizedContext) {

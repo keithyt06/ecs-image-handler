@@ -32,9 +32,15 @@ export class FormatAction extends BaseImageAction {
     if (params.length !== 2) {
       throw new InvalidArgument(`Format param error, e.g: format,jpg (${SUPPORTED_FORMAT.join(',')})`);
     }
-    opt.format = params[1];
+    opt.format = params[1].toLowerCase();
 
-    if (!SUPPORTED_FORMAT.includes(opt.format)) {
+    // 首先检查是否为明确禁止的格式
+    if (FORBIDDEN_FORMAT.includes(opt.format)) {
+      console.log(`检测到禁止的格式: ${opt.format}，自动转换为jpeg`);
+      opt.format = 'jpeg'; // 自动转换为jpeg
+    }
+    // 然后检查是否为支持的格式
+    else if (!SUPPORTED_FORMAT.includes(opt.format)) {
       throw new InvalidArgument(`Format must be one of ${SUPPORTED_FORMAT.join(',')}`);
     }
 
@@ -118,4 +124,10 @@ const SUPPORTED_FORMAT = [
   'webp',
   'avif', // Added AVIF support
   'gif',
+];
+
+// 明确禁止的格式
+const FORBIDDEN_FORMAT = [
+  'heif',
+  'heic'
 ];

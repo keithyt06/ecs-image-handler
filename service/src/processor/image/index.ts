@@ -213,26 +213,51 @@ export class ImageProcessor implements IProcessor {
       }
       await act.process(ctx, params);
 
-      if (ctx.features[Features.ReturnInfo]) { break; }
+    if (ctx.features[Features.ReturnInfo]) { break; }
+  }
+  if (ctx.features[Features.AutoWebp]) { ctx.image.webp(); }
+  if (ctx.features[Features.ReturnInfo]) {
+    return { data: ctx.info, type: 'application/json' };
+  } else {
+    const { data, info } = await ctx.image.toBuffer({ resolveWithObject: true });
+    
+    // 确保设置正确的Content-Disposition，防止下载而非显示
+    if (!ctx.headers['Content-Disposition']) {
+      ctx.headers['Content-Disposition'] = 'inline';
     }
-    if (ctx.features[Features.AutoWebp]) { ctx.image.webp(); }
-    if (ctx.features[Features.ReturnInfo]) {
-      return { data: ctx.info, type: 'application/json' };
-    } else {
-      const { data, info } = await ctx.image.toBuffer({ resolveWithObject: true });
-      
-      // 确保设置正确的Content-Disposition，防止下载而非显示
-      if (!ctx.headers['Content-Disposition']) {
-        ctx.headers['Content-Disposition'] = 'inline';
-      }
-      
-      // 确保AVIF格式正确标记
-      if (info.format === 'avif' && !ctx.headers['Content-Type']) {
-        ctx.headers['Content-Type'] = 'image/avif';
-      }
-      
-      return { data: data, type: 'image/' + info.format };
+    
+    // 显式拦截HEIF/HEIC格式，强制转换为JPEG
+    if (info.format && (info.format.toLowerCase().includes('heif') || info.format.toLowerCase().includes('heic'))) {
+      console.log(`在最终输出阶段检测到禁止的格式 ${info.format}，强制转换为JPEG`);
+      // 重新进行处理，转换为JPEG
+      ctx.image.jpeg({ 
+        quality: 85,
+        mozjpeg: true,
+        optimiseCoding: true,
+        trellisQuantisation: true 
+      });
+      const jpegResult = await ctx.image.toBuffer();
+      ctx.headers['Content-Type'] = 'image/jpeg';
+      return { data: jpegResult, type: 'image/jpeg' };
     }
+    
+    // 确保AVIF格式正确标记
+    if (info.format === 'avif' && !ctx.headers['Content-Type']) {
+      ctx.headers['Content-Type'] = 'image/avif';
+    }
+    
+    // 安全检查：确保任何输出都不是HEIF/HEIC格式
+    let safeType = info.format;
+    if (!safeType || safeType.toLowerCase().includes('heif') || safeType.toLowerCase().includes('heic')) {
+      safeType = 'jpeg';
+    }
+    
+    // 设置安全的MIME类型
+    const safeFormat = 'image/' + safeType;
+    ctx.headers['Content-Type'] = safeFormat;
+    
+    return { data: data, type: safeFormat };
+  }
   }
 
   public action(name: string): IAction {
