@@ -94,8 +94,7 @@ export class QualityAction extends BaseImageAction {
       ctx.image.avif({ 
         quality: qualityValue, 
         effort: 1, // 最低压缩级别提高兼容性
-        chromaSubsampling: '4:2:0', // 更兼容的色度子采样
-        speed: 8 // 更快的速度
+        chromaSubsampling: '4:2:0' // 更兼容的色度子采样
       });
       
       ctx.headers['Content-Type'] = 'image/avif';

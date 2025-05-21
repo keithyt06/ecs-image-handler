@@ -96,8 +96,7 @@ export class FormatAction extends BaseImageAction {
         effort: 1,  // 最低压缩级别，最高兼容性 (0-9)
         quality: config.defaultQuality.avif || 60,  // 更保守的默认质量
         chromaSubsampling: '4:2:0',  // 标准色度子采样
-        lossless: false,  // 使用有损压缩
-        speed: 8  // 更快速度，减少复杂性
+        lossless: false  // 使用有损压缩
       });
       
       // 确保设置正确的AVIF MIME类型，防止被误认为HEIF
