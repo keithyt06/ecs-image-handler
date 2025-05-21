@@ -59,6 +59,34 @@ export class ImageProcessor implements IProcessor {
     return image.timeout({ seconds: 60 }); // 增加超时，处理大图
     // 注意: limitInputPixels 在当前Sharp版本中不可用
   }
+  
+  // 获取安全的MIME类型，确保不返回HEIF/HEIC
+  public getSafeMimeType(type: string): string {
+    if (!type) return 'image/jpeg'; // 默认安全类型
+    
+    const normalizedType = type.toLowerCase();
+    // 处理常见图像格式
+    if (normalizedType === 'jpeg' || normalizedType === 'jpg') return 'image/jpeg';
+    if (normalizedType === 'png') return 'image/png';
+    if (normalizedType === 'webp') return 'image/webp';
+    if (normalizedType === 'avif') return 'image/avif';
+    if (normalizedType === 'gif') return 'image/gif';
+    if (normalizedType === 'tiff' || normalizedType === 'tif') return 'image/tiff';
+    if (normalizedType === 'svg') return 'image/svg+xml';
+    
+    // 禁止返回HEIF/HEIC格式
+    if (normalizedType === 'heif' || normalizedType === 'heic' ||
+        normalizedType.includes('heif') || normalizedType.includes('heic')) {
+      console.log(`在MIME类型处理中检测到HEIF/HEIC格式: ${normalizedType}，转换为JPEG`);
+      return 'image/jpeg';
+    }
+    
+    // 如果是完整的MIME类型
+    if (normalizedType.includes('/')) return normalizedType;
+    
+    // 默认使用安全格式
+    return 'image/jpeg';
+  }
 
   public setMaxGifSizeMB(value: number) {
     if (value > 0) {
@@ -179,25 +207,31 @@ export class ImageProcessor implements IProcessor {
     const nothing2do = (enabledActions.length === 0) || ((enabledActions.length === 1) && (this.name === enabledActions[0]));
 
     if (nothing2do && (!ctx.features[Features.AutoWebp])) {
+      // 获取原图
       const { buffer } = await ctx.bufferStore.get(ctx.uri);
       
+      // 检查格式是否为HEIF/HEIC
+      const formatLower = (ctx.metadata.format || '').toLowerCase();
+      if (formatLower === 'heif' || formatLower === 'heic' || formatLower.includes('heif') || formatLower.includes('heic')) {
+        // 如果是HEIF/HEIC格式，强制转换为JPEG
+        console.log(`拦截到HEIF/HEIC格式的原图: ${formatLower}，转换为JPEG`);
+        ctx.image.jpeg({ 
+          quality: 85,
+          mozjpeg: true,
+          optimiseCoding: true,
+          trellisQuantisation: true 
+        });
+        const jpegResult = await ctx.image.toBuffer();
+        ctx.headers['Content-Type'] = 'image/jpeg';
+        ctx.headers['Content-Disposition'] = 'inline';
+        return { data: jpegResult, type: 'jpeg' };
+      }
+      
       // 确保即使直接返回原图也设置正确的响应头
-      ctx.headers['Content-Type'] = getMimeType(ctx.metadata.format!);
+      ctx.headers['Content-Type'] = this.getSafeMimeType(ctx.metadata.format!);
       ctx.headers['Content-Disposition'] = 'inline'; // 强制浏览器显示而非下载
       
       return { data: buffer, type: ctx.metadata.format! };
-    }
-    
-    // 辅助函数 - 获取MIME类型
-    function getMimeType(type: string): string {
-      // 处理常见图像格式
-      if (type === 'jpeg' || type === 'jpg') return 'image/jpeg';
-      if (type === 'png') return 'image/png';
-      if (type === 'webp') return 'image/webp';
-      if (type === 'avif') return 'image/avif';
-      if (type === 'gif') return 'image/gif';
-      if (type.includes('/')) return type;
-      return `image/${type}`;
     }
 
     for (const action of enabledActions) {

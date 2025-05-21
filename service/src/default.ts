@@ -92,7 +92,7 @@ function processImParam(imParam: string): string[] {
         height = param.substring(7);
         resizeParams.push(`h_${height}`);
       } else if (param.startsWith('format=')) {
-        format = param.substring(7);
+        format = param.substring(7).toLowerCase();
       } else if (param.startsWith('quality=')) {
         quality = param.substring(8);
       }
@@ -103,14 +103,20 @@ function processImParam(imParam: string): string[] {
       throw new InvalidArgument('Resize操作需要同时指定width和height参数');
     }
     
-    // 默认使用m_fixed模式，确保尺寸参数一定生效
-    // 也可以使用m_lfit保持宽高比
-    resizeParams.push('m_fixed');
+    // 默认使用m_lfit模式，保持原始宽高比例
+    // 根据用户需求，这里改为根据宽为准
+    resizeParams.push('m_lfit');
     
     result.push(resizeParams.join(','));
     
     // 添加格式处理 (可选参数)
+    // 注意：这里特意不在传入时就设定默认格式，让index.ts中的Accept逻辑处理
     if (format) {
+      // 防止HEIF/HEIC格式
+      if (format === 'heif' || format === 'heic') {
+        console.log(`检测到禁止的格式：${format}，自动转换为jpeg`);
+        format = 'jpeg';
+      }
       result.push(`format,${format}`);
     }
     

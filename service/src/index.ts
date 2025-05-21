@@ -275,6 +275,7 @@ Promise<{ data: any; type: string; headers: IHttpHeaders }> {
   // 检查是否已指定format操作
   let hasFormat = false;
   let hasQuality = false;
+  let hasResize = false;
   
   for (const action of actions) {
     const params = action.split(',');
@@ -282,15 +283,21 @@ Promise<{ data: any; type: string; headers: IHttpHeaders }> {
       hasFormat = true;
     } else if (params[0] === 'quality') {
       hasQuality = true;
+    } else if (params[0] === 'resize') {
+      hasResize = true;
     }
   }
   
-  // 只有在有其他操作时（例如resize）才添加format和quality操作，确保原图访问能力
-  if (actions.length > 0) {
-    // 添加Accept头处理
-    const acceptHeader = ctx.get('Accept');
-    const optimalFormat = getOptimalFormat(acceptHeader);
-    
+  // 添加Accept头处理
+  const acceptHeader = ctx.get('Accept');
+  console.log(`请求的Accept头: ${acceptHeader}`);
+  
+  // 获取最佳格式
+  const optimalFormat = getOptimalFormat(acceptHeader);
+  console.log(`基于Accept头选择的最佳格式: ${optimalFormat || '无'}`);
+  
+  // 如果有resize操作 或 其他任何操作，添加format和quality
+  if (actions.length > 0 && (hasResize || actions.length > 1)) {
     // 如果没有指定format且有最优格式，添加format操作
     if (!hasFormat && optimalFormat) {
       actions.push(`format,${optimalFormat}`);
@@ -301,10 +308,22 @@ Promise<{ data: any; type: string; headers: IHttpHeaders }> {
     if (!hasQuality) {
       // 默认质量参数根据格式不同
       let defaultQuality = 80;
-      if (optimalFormat === 'avif') defaultQuality = 60;
-      if (optimalFormat === 'webp') defaultQuality = 80;
-      if (optimalFormat === 'jpeg' || optimalFormat === 'jpg') defaultQuality = 85;
-      if (optimalFormat === 'png') defaultQuality = 90;
+      let targetFormat = optimalFormat;
+      
+      // 如果手动指定了格式，使用指定的格式决定质量
+      if (hasFormat) {
+        for (const action of actions) {
+          if (action.startsWith('format,')) {
+            targetFormat = action.split(',')[1];
+            break;
+          }
+        }
+      }
+      
+      if (targetFormat === 'avif') defaultQuality = 60;
+      if (targetFormat === 'webp') defaultQuality = 80;
+      if (targetFormat === 'jpeg' || targetFormat === 'jpg') defaultQuality = 85;
+      if (targetFormat === 'png') defaultQuality = 90;
       
       actions.push(`quality,q_${defaultQuality}`);
       console.log(`添加默认质量参数: ${defaultQuality}`);
