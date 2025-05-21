@@ -189,6 +189,17 @@ export class ImageProcessor implements IProcessor {
       return { data: ctx.info, type: 'application/json' };
     } else {
       const { data, info } = await ctx.image.toBuffer({ resolveWithObject: true });
+      
+      // 确保设置正确的Content-Disposition，防止下载而非显示
+      if (!ctx.headers['Content-Disposition']) {
+        ctx.headers['Content-Disposition'] = 'inline';
+      }
+      
+      // 确保AVIF格式正确标记
+      if (info.format === 'avif' && !ctx.headers['Content-Type']) {
+        ctx.headers['Content-Type'] = 'image/avif';
+      }
+      
       return { data: data, type: 'image/' + info.format };
     }
   }
@@ -229,5 +240,3 @@ ImageProcessor.getInstance().register(
   new StripMetadataAction(),
   new ThresholdAction(),
 );
-
-

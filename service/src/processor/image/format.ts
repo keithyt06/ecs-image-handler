@@ -50,6 +50,7 @@ export class FormatAction extends BaseImageAction {
     const opt = this.validate(params);
     if ('gif' === opt.format) {
       ctx.headers['Content-Type'] = 'image/gif';
+      ctx.headers['Content-Disposition'] = 'inline';
       return; // nothing to do
     }
     
@@ -80,7 +81,7 @@ export class FormatAction extends BaseImageAction {
     } else if (opt.format === 'webp') {
       ctx.metadata.format = 'webp';
       ctx.image.webp({ 
-        effort: 4,  // 平衡压缩效率和速度
+        effort: 3,  // 降低压缩级别提高兼容性
         quality: config.defaultQuality.webp,
         alphaQuality: 100,  // 保持透明度质量
         smartSubsample: true  // 智能色度子采样
@@ -90,11 +91,11 @@ export class FormatAction extends BaseImageAction {
       ctx.headers['Content-Disposition'] = 'inline';
     } else if (opt.format === 'avif') {
       ctx.metadata.format = 'avif';
-      // 使用适当的AVIF配置
+      // 使用最兼容的AVIF配置
       ctx.image.avif({ 
-        effort: 4,  // 降低压缩级别提高兼容性 (0-9)
-        quality: config.defaultQuality.avif || 80,  // AVIF默认质量调整
-        chromaSubsampling: '4:2:0',  // 提高兼容性
+        effort: 2,  // 进一步降低压缩级别提高兼容性 (0-9)
+        quality: config.defaultQuality.avif || 75,  // AVIF默认质量调整
+        chromaSubsampling: '4:2:0',  // 使用更标准的色度子采样以提高兼容性
         lossless: false  // 使用有损压缩以获得更好的压缩率
       });
       

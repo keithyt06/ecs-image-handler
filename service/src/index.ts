@@ -172,17 +172,35 @@ function getOptimalFormat(acceptHeader: string): string {
   // 解析Accept头，进行更精确的MIME类型匹配
   const formats = acceptHeader.split(',').map(f => f.trim().toLowerCase());
   
-  // 按优先级检查支持的格式（avif > webp > 原图）
-  if (formats.some(f => f.includes('image/avif'))) {
-    return 'avif';
-  } else if (formats.some(f => f.includes('image/webp'))) {
-    return 'webp';
+  // 计算质量因子 (q值)，默认为1.0
+  function getQuality(format: string): number {
+    const qMatch = format.match(/q=([0-9.]+)/);
+    return qMatch ? parseFloat(qMatch[1]) : 1.0;
   }
   
-  // 检查其他常见格式
-  if (formats.some(f => f.includes('image/png'))) {
+  // 检查是否支持特定格式，并返回最高质量值
+  function getFormatQuality(keyword: string): number {
+    const matchingFormats = formats.filter(f => f.includes(keyword));
+    if (matchingFormats.length === 0) return -1;
+    return Math.max(...matchingFormats.map(getQuality));
+  }
+  
+  // 按优先级和质量因子检查支持的格式
+  const formatQualities = {
+    'webp': getFormatQuality('image/webp'),
+    'avif': getFormatQuality('image/avif'),
+    'png': getFormatQuality('image/png'),
+    'jpeg': Math.max(getFormatQuality('image/jpeg'), getFormatQuality('image/jpg'))
+  };
+  
+  // 某些浏览器对AVIF支持有问题，如果不是高质量支持（q>=0.9）则降级到WebP
+  if (formatQualities.avif >= 0.9) {
+    return 'avif';
+  } else if (formatQualities.webp >= 0) {
+    return 'webp';
+  } else if (formatQualities.png >= 0) {
     return 'png';
-  } else if (formats.some(f => f.includes('image/jpeg') || f.includes('image/jpg'))) {
+  } else if (formatQualities.jpeg >= 0) {
     return 'jpeg';
   }
   
