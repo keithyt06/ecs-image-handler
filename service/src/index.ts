@@ -1,10 +1,10 @@
 import * as S3 from 'aws-sdk/clients/s3';
 import * as SecretsManager from 'aws-sdk/clients/secretsmanager';
 import * as SSM from 'aws-sdk/clients/ssm';
-import * as HttpErrors from 'http-errors';
+// import * as HttpErrors from 'http-errors'; // 未使用，已注释
 import * as Koa from 'koa'; // http://koajs.cn
 import * as bodyParser from 'koa-bodyparser';
-import * as koaCash from 'koa-cash';
+// import * as koaCash from 'koa-cash'; // 未使用，已禁用缓存功能
 import * as logger from 'koa-logger';
 import * as Router from 'koa-router';
 import { LRUCache } from 'lru-cache';
@@ -96,9 +96,8 @@ router.get(['/debug', '/_debug'], async (ctx) => {
 });
 
 router.get('/(.*)', async (ctx) => {
-  // 禁用缓存检查，确保每次请求都重新处理图像
-  // if (await ctx.cashed()) return;
-
+  // 缓存功能已完全禁用
+  
   const queue = sharp.counters().queue;
   if (queue > config.sharpQueueLimit) {
     ctx.body = { message: 'Too many requests, please try again later.' };
