@@ -13,10 +13,8 @@ import config from './config';
 import debug from './debug';
 import { bufferStore, getBufferStores, getProcessor, parseRequest, setMaxGifSizeMB, setMaxGifPages } from './default';
 import * as is from './is';
-import { IHttpHeaders, InvalidArgument } from './processor';
+import { IHttpHeaders } from './processor';
 import { IBufferStore } from './store';
-
-const MB = 1048576;
 
 const ssm = new SSM({ region: config.region });
 const smclient = new SecretsManager({ region: config.region });
@@ -100,7 +98,7 @@ router.get(['/', '/ping'], async (ctx: Koa.ParameterizedContext) => {
 });
 
 router.get(['/debug', '/_debug'], async (ctx: Koa.ParameterizedContext) => {
-  console.log(JSON.stringify(debug({}))); // Updated to not use lruCache
+  console.log(JSON.stringify(debug())); // Call debug without arguments
   ctx.status = 400;
   ctx.body = 'Please check your server logs for more details!';
 });
