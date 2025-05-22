@@ -1,13 +1,13 @@
 import * as S3 from 'aws-sdk/clients/s3';
 import * as SecretsManager from 'aws-sdk/clients/secretsmanager';
 import * as SSM from 'aws-sdk/clients/ssm';
-// import * as HttpErrors from 'http-errors'; // 未使用，已注释
+import * as HttpErrors from 'http-errors';
 import * as Koa from 'koa'; // http://koajs.cn
 import * as bodyParser from 'koa-bodyparser';
 // import * as koaCash from 'koa-cash'; // 未使用，已禁用缓存功能
 import * as logger from 'koa-logger';
 import * as Router from 'koa-router';
-import { LRUCache } from 'lru-cache';
+// import { LRUCache } from 'lru-cache'; // Removed LRUCache import
 import * as sharp from 'sharp';
 import config from './config';
 import debug from './debug';
@@ -27,14 +27,14 @@ const DefaultBufferStore = bufferStore();
 
 const app = new Koa();
 const router = new Router();
-const lruCache = new LRUCache<string, CacheObject>({
-  max: config.CACHE_MAX_ITEMS,
-  maxSize: config.CACHE_MAX_SIZE_MB * MB,
-  ttl: config.CACHE_TTL_SEC * 1000,
-  sizeCalculation: (value) => {
-    return value.body.length;
-  },
-});
+// const lruCache = new LRUCache<string, CacheObject>({ // Commented out lruCache
+//   max: config.CACHE_MAX_ITEMS,
+//   maxSize: config.CACHE_MAX_SIZE_MB * MB,
+//   ttl: config.CACHE_TTL_SEC * 1000,
+//   sizeCalculation: (value) => {
+//     return value.body.length;
+//   },
+// });
 
 // 优化Sharp缓存设置以提高性能
 // items: 增加到3000，允许缓存更多处理过的图像
@@ -66,7 +66,7 @@ app.use(bodyParser());
 //   },
 // }));
 
-router.post('/images', async (ctx) => {
+router.post('/images', async (ctx: Koa.ParameterizedContext) => {
   console.log('post request body=', ctx.request.body);
 
   const opt = await validatePostRequest(ctx);
@@ -89,7 +89,7 @@ router.post('/images', async (ctx) => {
   }
 });
 
-router.get(['/', '/ping'], async (ctx) => {
+router.get(['/', '/ping'], async (ctx: Koa.ParameterizedContext) => {
   ctx.body = 'ok';
 
   try {
@@ -99,13 +99,13 @@ router.get(['/', '/ping'], async (ctx) => {
   }
 });
 
-router.get(['/debug', '/_debug'], async (ctx) => {
-  console.log(JSON.stringify(debug(lruCache)));
+router.get(['/debug', '/_debug'], async (ctx: Koa.ParameterizedContext) => {
+  console.log(JSON.stringify(debug({}))); // Updated to not use lruCache
   ctx.status = 400;
   ctx.body = 'Please check your server logs for more details!';
 });
 
-router.get('/(.*)', async (ctx) => {
+router.get('/(.*)', async (ctx: Koa.ParameterizedContext) => {
   // 缓存功能已完全禁用
   
   const queue = sharp.counters().queue;
@@ -134,7 +134,7 @@ app.listen(config.port, () => {
 });
 
 function errorHandler(): Koa.Middleware<Koa.DefaultState, Koa.DefaultContext, any> {
-  return async (ctx, next) => {
+  return async (ctx: Koa.ParameterizedContext, next: Koa.Next) => {
     try {
       await next();
     } catch (err: any) {
@@ -321,27 +321,44 @@ Promise<{ data: any; type: string; headers: IHttpHeaders }> {
     
     // 如果没有指定quality，添加默认质量参数
     if (!hasQuality) {
-      // 默认质量参数根据格式不同
-      let defaultQuality = 80;
-      let targetFormat = optimalFormat;
-      
-      // 如果手动指定了格式，使用指定的格式决定质量
-      if (hasFormat) {
+      let defaultQualityValue: number;
+      // 确定目标格式以选择默认质量
+      let targetFormatForQuality = optimalFormat; // 默认为Accept头选出的最优格式
+      if (hasFormat) { // 如果请求中明确指定了format，则以其为准
         for (const action of actions) {
           if (action.startsWith('format,')) {
-            targetFormat = action.split(',')[1];
+            targetFormatForQuality = action.split(',')[1];
             break;
           }
         }
       }
+
+      // 根据目标格式从config中获取默认质量
+      switch (targetFormatForQuality) {
+        case 'avif':
+          defaultQualityValue = config.defaultQuality.avif;
+          break;
+        case 'webp':
+          defaultQualityValue = config.defaultQuality.webp;
+          break;
+        case 'jpeg':
+        case 'jpg':
+          defaultQualityValue = config.defaultQuality.jpeg;
+          break;
+        case 'png':
+          // 确保 config.defaultQuality 中有 png 属性
+          defaultQualityValue = config.defaultQuality.png !== undefined ? config.defaultQuality.png : 90; // Fallback if not in config
+          break;
+        default:
+          // 对于其他未明确处理的格式或无格式转换的情况
+          // 可以选择一个通用回退值，例如JPEG的默认质量
+          // 或者，如果不希望为未知格式添加quality动作，这里可以不操作
+          defaultQualityValue = config.defaultQuality.jpeg; // 使用JPEG作为通用回退
+          console.log(`未找到 ${targetFormatForQuality} 的特定默认质量，使用JPEG默认值: ${defaultQualityValue}`);
+      }
       
-      if (targetFormat === 'avif') defaultQuality = 60;
-      if (targetFormat === 'webp') defaultQuality = 80;
-      if (targetFormat === 'jpeg' || targetFormat === 'jpg') defaultQuality = 85;
-      if (targetFormat === 'png') defaultQuality = 90;
-      
-      actions.push(`quality,q_${defaultQuality}`);
-      console.log(`添加默认质量参数: ${defaultQuality}`);
+      actions.push(`quality,q_${defaultQualityValue}`);
+      console.log(`已注入默认质量参数 quality,q_${defaultQualityValue} 针对于格式 ${targetFormatForQuality || '原始格式'}`);
     }
   }
   
@@ -375,16 +392,30 @@ Promise<{ data: any; type: string; headers: IHttpHeaders }> {
     const tempActions = [];
     
     // 添加格式转换动作
-    const targetFormat = optimalFormat || 'jpeg';
+    const targetFormat = optimalFormat || 'jpeg'; // 如果Accept头没有，则默认为jpeg
     tempActions.push(`format,${targetFormat}`);
     
-    // 添加质量参数
-    let defaultQuality = 80;
-    if (targetFormat === 'avif') defaultQuality = 60;
-    if (targetFormat === 'webp') defaultQuality = 80;
-    if (targetFormat === 'jpeg' || targetFormat === 'jpg') defaultQuality = 85;
-    if (targetFormat === 'png') defaultQuality = 90;
-    tempActions.push(`quality,q_${defaultQuality}`);
+    // 为原图转换添加质量参数，同样从config读取
+    let defaultQualityForOriginal: number;
+    switch (targetFormat) {
+      case 'avif':
+        defaultQualityForOriginal = config.defaultQuality.avif;
+        break;
+      case 'webp':
+        defaultQualityForOriginal = config.defaultQuality.webp;
+        break;
+      case 'jpeg':
+      case 'jpg':
+        defaultQualityForOriginal = config.defaultQuality.jpeg;
+        break;
+      case 'png':
+        defaultQualityForOriginal = config.defaultQuality.png !== undefined ? config.defaultQuality.png : 90; // Fallback
+        break;
+      default:
+        defaultQualityForOriginal = config.defaultQuality.jpeg; // Fallback
+    }
+    tempActions.push(`quality,q_${defaultQualityForOriginal}`);
+    console.log(`原图处理：已注入默认质量 quality,q_${defaultQualityForOriginal} 针对于转换格式 ${targetFormat}`);
     
     // 使用主处理器处理图像
     const processor = getProcessor('image');
@@ -442,12 +473,12 @@ async function validatePostRequest(ctx: Koa.ParameterizedContext) {
   const secretHeader = await getHeaderFromSecretsManager();
 
   if (authHeader !== secretHeader) {
-    throw new InvalidArgument('Invalid post header.');
+    throw new HttpErrors[400]('Invalid post header.');
   }
 
   const body = ctx.request.body;
   if (!body) {
-    throw new InvalidArgument('Empty post body.');
+    throw new HttpErrors[400]('Empty post body.');
   }
   const valid = body.params
     && body.sourceBucket
@@ -455,7 +486,7 @@ async function validatePostRequest(ctx: Koa.ParameterizedContext) {
     && body.targetBucket
     && body.targetObject;
   if (!valid) {
-    throw new InvalidArgument('Invalid post body.');
+    throw new HttpErrors[400]('Invalid post body.');
   }
   return {
     params: body.params,

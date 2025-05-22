@@ -33,6 +33,7 @@ export interface IConfig {
     jpeg: number;
     webp: number;
     avif: number;
+    png: number;
   };
 }
 
@@ -69,8 +70,9 @@ const conf: IConfig = {
   CACHE_MAX_SIZE_MB: parseInt(CACHE_MAX_SIZE_MB ?? '1024'),
   defaultQuality: {
     jpeg: 80, 
-    webp: 80,
-    avif: 70, // AVIF默认使用略低的质量值以获得更好的压缩率
+    webp: 75,
+    avif: 55,
+    png: 85,
   },
 };
 

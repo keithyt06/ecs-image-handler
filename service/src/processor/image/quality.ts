@@ -4,6 +4,7 @@ import { IActionOpts, InvalidArgument, ReadOnly } from '..';
 import * as is from '../../is';
 import { BaseImageAction } from './_base';
 import * as jpeg from './jpeg';
+import config from '../../config';
 
 
 const JPG = 'jpg';
@@ -59,16 +60,16 @@ export class QualityAction extends BaseImageAction {
     let qualityValue: number;
     
     if (JPEG === metadata.format || JPG === metadata.format) {
-      qualityValue = opt.q ?? opt.Q ?? 85; // JPEG默认质量更高
-      let q = 72;
-      if (opt.q) {
+      qualityValue = opt.q ?? opt.Q ?? config.defaultQuality.jpeg; 
+      let q = 72; // Default base for relative calculation if not specified by Q or config
+      if (opt.q) { // Relative quality
         const buffer = await ctx.image.toBuffer();
         const estq = jpeg.decode(buffer).quality;
         q = Math.round(estq * opt.q / 100);
-      } else if (opt.Q) {
+      } else if (opt.Q) { // Absolute quality from Q_ param
         q = opt.Q;
-      } else {
-        q = qualityValue; // 使用默认值
+      } else { // Default absolute quality from config
+        q = qualityValue;
       }
       ctx.image.jpeg({ 
         quality: q, 
@@ -77,35 +78,48 @@ export class QualityAction extends BaseImageAction {
         trellisQuantisation: true
       });
       
-      // 确保设置正确的MIME类型
       ctx.headers['Content-Type'] = 'image/jpeg';
     } else if (WEBP === metadata.format) {
-      qualityValue = opt.q ?? opt.Q ?? 80; // WebP默认质量
+      qualityValue = opt.q ?? opt.Q ?? config.defaultQuality.webp;
       ctx.image.webp({ 
         quality: qualityValue, 
-        effort: 4, // 平衡效率和质量
-        alphaQuality: 100, // 保持透明度质量
-        smartSubsample: true // 智能色度子采样
+        effort: 4, 
+        alphaQuality: 100, 
+        smartSubsample: true 
       });
       
       ctx.headers['Content-Type'] = 'image/webp';
     } else if ('avif' === metadata.format) {
-      qualityValue = opt.q ?? opt.Q ?? 60; // AVIF默认较低质量以提高兼容性
+      qualityValue = opt.q ?? opt.Q ?? config.defaultQuality.avif;
       ctx.image.avif({ 
         quality: qualityValue, 
-        effort: 1, // 最低压缩级别提高兼容性
-        chromaSubsampling: '4:2:0' // 更兼容的色度子采样
+        effort: 1, 
+        chromaSubsampling: '4:2:0' 
       });
       
       ctx.headers['Content-Type'] = 'image/avif';
     } else if ('png' === metadata.format) {
-      // PNG是无损的，但可以通过其他参数调整
-      qualityValue = opt.q ?? opt.Q ?? 90; // PNG默认高质量
-      const compressionLevel = Math.max(1, Math.min(9, Math.round((100 - qualityValue) / 10)));
+      qualityValue = opt.q ?? opt.Q ?? config.defaultQuality.png;
+      // Convert quality (1-100) to PNG compressionLevel (0-9 for sharp, but we'll use 1-9)
+      // Higher quality means lower compressionLevel value for sharp.png()
+      // So, 100 quality = level 1 (least compression), 1 quality = level 9 (most compression)
+      // However, sharp.png().compressionLevel is 0-9 where 9 is highest compression.
+      // Let's map: quality 100 -> effort/compressionLevel low (e.g. 1-3)
+      //            quality 1   -> effort/compressionLevel high (e.g. 9)
+      // A simple mapping: (100-quality)/10, clamped. Let's use effort for png like in format.ts
+      // For PNG, 'quality' is more about processing effort vs file size for lossless.
+      // Sharp's PNG 'quality' param (1-100) itself controls quantization if palette is true.
+      // Since palette is false, we use compressionLevel and effort.
+      // Let's use the qualityValue to adjust effort or compressionLevel.
+      // A simpler approach: use the qualityValue for 'effort' if applicable or map to compressionLevel.
+      // The existing format.ts uses fixed effort/compressionLevel for PNG.
+      // For consistency, if QualityAction is used for PNG, we can make it influence compressionLevel.
+      const compressionLevel = Math.max(0, Math.min(9, Math.floor(9 - (qualityValue -1) / 11))); // maps 1-100 to 9-0
+
       ctx.image.png({ 
-        compressionLevel,
+        compressionLevel: compressionLevel, // quality 100 -> CL 0, quality 1 -> CL 9
         adaptiveFiltering: true,
-        effort: 5,
+        effort: Math.max(1, Math.min(10, Math.ceil(qualityValue / 10))), // quality 1-100 to effort 1-10
         palette: false
       });
       

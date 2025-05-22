@@ -22,6 +22,7 @@
     "@types/aws-lambda": "^8.10.95",
     "@types/benchmark": "^2.1.1",
     "@types/jest": "^26.0.24",
+    "@types/http-errors": "^1.8.1",
     "@types/koa": "^2.13.4",
     "@types/koa-bodyparser": "^4.3.7",
     "@types/koa-cash": "^4.1.0",
