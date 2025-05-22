@@ -1,10 +1,23 @@
 import { IImageContext } from '.';
 import { IActionOpts, ReadOnly, InvalidArgument, Features, IProcessContext } from '..';
 import { BaseImageAction } from './_base';
-import { AvailableFormatInfo } from 'sharp';
+
+// Define supported formats as a const array for runtime checks
+// and a type for compile-time type safety.
+const SUPPORTED_FORMAT_VALUES = [
+  'jpg',
+  'jpeg',
+  'png',
+  'webp',
+  'avif',
+  'gif',
+] as const; // Use 'as const' for a literal type
+
+// Create a union type from the const array values
+type SupportedFormat = typeof SUPPORTED_FORMAT_VALUES[number];
 
 export interface FormatOpts extends IActionOpts {
-  format: string;
+  format: SupportedFormat; // Use the stricter type here
 }
 
 export class FormatAction extends BaseImageAction {
@@ -31,30 +44,41 @@ export class FormatAction extends BaseImageAction {
   }
 
   public validate(params: string[]): ReadOnly<FormatOpts> {
-    let opt: FormatOpts = { format: '' };
-
     if (params.length !== 2) {
-      throw new InvalidArgument(`Format param error, e.g: format,jpg (${SUPPORTED_FORMAT.join(',')})`);
+      throw new InvalidArgument(`Format param error, e.g: format,jpg (${SUPPORTED_FORMAT_VALUES.join(',')})`);
     }
-    opt.format = params[1].toLowerCase();
-    console.log(`FormatAction.validate: Validating format - ${opt.format}`);
+    const requestedFormat = params[1].toLowerCase();
+    console.log(`FormatAction.validate: Validating format - ${requestedFormat}`);
 
-    if (FORBIDDEN_FORMAT.includes(opt.format)) {
-      console.warn(`FormatAction.validate: Forbidden format ${opt.format} detected, defaulting to jpeg.`);
-      opt.format = 'jpeg';
-    } else if (!SUPPORTED_FORMAT.includes(opt.format)) {
-      console.error(`FormatAction.validate: Unsupported format ${opt.format}.`);
-      throw new InvalidArgument(`Format must be one of ${SUPPORTED_FORMAT.join(',')}`);
+    let finalFormat: SupportedFormat = 'jpeg'; // Default to jpeg
+
+    if (FORBIDDEN_FORMAT.includes(requestedFormat)) {
+      console.warn(`FormatAction.validate: Forbidden format ${requestedFormat} detected, defaulting to jpeg.`);
+      // finalFormat is already 'jpeg' as per default initialization
+    } else {
+      // Check if requestedFormat is one of the SUPPORTED_FORMAT_VALUES
+      let isSupported = false;
+      for (const fmt of SUPPORTED_FORMAT_VALUES) {
+        if (fmt === requestedFormat) {
+          finalFormat = fmt;
+          isSupported = true;
+          break;
+        }
+      }
+      if (!isSupported) {
+        console.error(`FormatAction.validate: Unsupported format ${requestedFormat}. Supported are: ${SUPPORTED_FORMAT_VALUES.join(', ')}`);
+        throw new InvalidArgument(`Format must be one of ${SUPPORTED_FORMAT_VALUES.join(',')}`);
+      }
     }
-    return opt;
+    return { format: finalFormat };
   }
 
   public async process(ctx: IImageContext, params: string[]): Promise<void> {
-    const opts = this.validate(params);
+    const opts = this.validate(params); // opts.format is now of type SupportedFormat
     console.log(`FormatAction.process: Setting target format in context to: ${opts.format}. Current image format: ${ctx.metadata.format}`);
 
     // Set the target format in the context. Actual conversion will be handled by QualityAction or final output.
-    ctx.metadata.format = opts.format as AvailableFormatInfo; 
+    ctx.metadata.format = opts.format; 
 
     // If AutoWebp feature was set, disable it because a specific format is now being applied.
     if (ctx.features[Features.AutoWebp]) {
@@ -67,14 +91,7 @@ export class FormatAction extends BaseImageAction {
   }
 }
 
-const SUPPORTED_FORMAT = [
-  'jpg',
-  'jpeg',
-  'png',
-  'webp',
-  'avif', // Added AVIF support
-  'gif',
-];
+// const SUPPORTED_FORMAT = [ ... ]; // This is now replaced by SUPPORTED_FORMAT_VALUES
 
 // 明确禁止的格式
 const FORBIDDEN_FORMAT = [
