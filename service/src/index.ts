@@ -384,7 +384,8 @@ Promise<{ data: any; type: string; headers: IHttpHeaders }> {
     return { data, type, headers: finalHeaders };
   } else {
     console.log(`ossprocess: Processing as original image request (or only Accept header optimization). URI: ${uri}`);
-    const { buffer: originalBuffer, type: originalType, headers: originalS3Headers } = await bs.get(uri, beforeGetFn);
+    // Remove originalBuffer from destructuring as it's not directly used here; ImageProcessor.newContext will fetch it.
+    const { type: originalType, headers: originalS3Headers } = await bs.get(uri, beforeGetFn);
     console.log(`ossprocess: Original image fetched. Type from store: ${originalType}, S3 Headers: ${JSON.stringify(originalS3Headers)}`);
 
     const tempActions = [];

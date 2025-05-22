@@ -1,7 +1,7 @@
 import { IImageContext } from '.';
 import { IActionOpts, ReadOnly, InvalidArgument, Features, IProcessContext } from '..';
-import config from '../../config';
 import { BaseImageAction } from './_base';
+import { AvailableFormatInfo } from 'sharp';
 
 export interface FormatOpts extends IActionOpts {
   format: string;
@@ -54,7 +54,7 @@ export class FormatAction extends BaseImageAction {
     console.log(`FormatAction.process: Setting target format in context to: ${opts.format}. Current image format: ${ctx.metadata.format}`);
 
     // Set the target format in the context. Actual conversion will be handled by QualityAction or final output.
-    ctx.metadata.format = opts.format; 
+    ctx.metadata.format = opts.format as AvailableFormatInfo; 
 
     // If AutoWebp feature was set, disable it because a specific format is now being applied.
     if (ctx.features[Features.AutoWebp]) {
