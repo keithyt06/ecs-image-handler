@@ -22,6 +22,7 @@ import { SharpenAction } from './sharpen';
 import { StripMetadataAction } from './strip-metadata';
 import { ThresholdAction } from './threshold';
 import { WatermarkAction } from './watermark';
+import config from '../../config';
 
 export interface IImageInfo {
   [key: string]: { value: string };
@@ -105,6 +106,10 @@ export class ImageProcessor implements IProcessor {
   }
 
   public async newContext(uri: string, actions: string[], bufferStore: IBufferStore): Promise<IImageContext> {
+    const imageBuffer = await bufferStore.get(uri);
+    console.log(`ImageProcessor.newContext: Loaded image ${uri}. Buffer length: ${imageBuffer.buffer.length}`);
+    console.log(`ImageProcessor.newContext: Sharp versions: ${JSON.stringify(sharp.versions)}`);
+
     const ctx: IProcessContext = {
       uri,
       actions,
@@ -130,11 +135,10 @@ export class ImageProcessor implements IProcessor {
       }
       act.beforeNewContext.bind(act)(ctx, params, i);
     }
-    const { buffer, headers } = await bufferStore.get(uri);
     let image;
     let metadata;
     if (ctx.features[Features.LimitAnimatedFrames] > 0) {
-      image = sharp(buffer, { failOnError: false, animated: false });
+      image = sharp(imageBuffer.buffer, { failOnError: false, animated: false });
       metadata = await image.metadata();
       if (!('gif' === metadata.format)) {
         throw new InvalidArgument('Format must be Gif');
@@ -143,12 +147,12 @@ export class ImageProcessor implements IProcessor {
         throw new InvalidArgument('Can\'t read gif\'s pages');
       }
       const pages = Math.min(ctx.features[Features.LimitAnimatedFrames], metadata.pages);
-      image = sharp(buffer, { failOnError: false, animated: ctx.features[Features.ReadAllAnimatedFrames], pages });
+      image = sharp(imageBuffer.buffer, { failOnError: false, animated: ctx.features[Features.ReadAllAnimatedFrames], pages });
       // 应用图像处理管道优化
       image = this.optimizeImageProcessingPipeline(image);
       metadata = await image.metadata();
     } else {
-      image = sharp(buffer, { failOnError: false, animated: ctx.features[Features.ReadAllAnimatedFrames] });
+      image = sharp(imageBuffer.buffer, { failOnError: false, animated: ctx.features[Features.ReadAllAnimatedFrames] });
       // 应用图像处理管道优化
       image = this.optimizeImageProcessingPipeline(image);
       metadata = await image.metadata();
@@ -168,13 +172,17 @@ export class ImageProcessor implements IProcessor {
       image.png({ adaptiveFiltering: true });
     }
 
+    if (metadata.format && (metadata.format.toLowerCase() === 'heic' || metadata.format.toLowerCase() === 'heif')) {
+      console.log(`ImageProcessor.newContext: Input image format is HEIC/HEIF (${metadata.format}). Sharp will attempt to decode this.`);
+    }
+
     return {
       uri: ctx.uri,
       actions: ctx.actions,
       mask: ctx.mask,
       bufferStore: ctx.bufferStore,
       features: ctx.features,
-      headers: Object.assign(ctx.headers, headers),
+      headers: Object.assign(ctx.headers, imageBuffer.headers),
       metadata,
       image,
     };
@@ -188,110 +196,110 @@ export class ImageProcessor implements IProcessor {
       throw new InvalidArgument('Invalid image context! No "actions" field.');
     }
 
-    if (ctx.features[Features.AutoOrient]) { ctx.image.rotate(); }
+    if (ctx.features[Features.AutoOrient]) { 
+      console.log('ImageProcessor.process: Applying auto-orientation.');
+      ctx.image.rotate(); 
+    }
 
     ctx.mask.forEachAction((action, _, index) => {
       if ((this.name === action) || (!action)) {
         return;
       }
-      // "<action-name>,<param-1>,<param-2>,..."
       const params = action.split(',');
       const name = params[0];
       const act = this.action(name);
       if (!act) {
-        throw new InvalidArgument(`Unkown action: "${name}"`);
+        console.error(`ImageProcessor.process: Unknown action: "${name}"`);
+        throw new InvalidArgument(`Unknown action: "${name}"`);
       }
+      console.log(`ImageProcessor.process: Before processing action "${name}" with params: ${params.slice(1).join(',')}`);
       act.beforeProcess.bind(act)(ctx, params, index);
     });
-    const enabledActions = ctx.mask.filterEnabledActions();
-    const nothing2do = (enabledActions.length === 0) || ((enabledActions.length === 1) && (this.name === enabledActions[0]));
 
-    if (nothing2do && (!ctx.features[Features.AutoWebp])) {
-      // 获取原图
-      const { buffer } = await ctx.bufferStore.get(ctx.uri);
+    const enabledActions = ctx.mask.filterEnabledActions();
+    console.log(`ImageProcessor.process: Enabled actions for processing: ${JSON.stringify(enabledActions)}`);
+    // const nothing2do = (enabledActions.length === 0) || ((enabledActions.length === 1) && (this.name === enabledActions[0]));
+    // The above check is too simple. If only 'format' and 'quality' are present, it IS something to do.
+    // A better check: are there any actions other than 'image' itself?
+    const hasMeaningfulActions = enabledActions.some(action => action !== this.name && action.trim() !== '');
+
+    if (!hasMeaningfulActions && !ctx.features[Features.AutoWebp]) {
+      console.log('ImageProcessor.process: No meaningful actions to perform and AutoWebp is off. Returning original image.');
+      const { buffer, headers: originalHeaders } = await ctx.bufferStore.get(ctx.uri);
+      const originalMetadata = await sharp(buffer).metadata(); // Get metadata of the original buffer
+      const finalFormat = originalMetadata.format || 'jpeg'; // Fallback if format is undefined
       
-      // 检查格式是否为HEIF/HEIC
-      const formatLower = (ctx.metadata.format || '').toLowerCase();
-      if (formatLower === 'heif' || formatLower === 'heic' || formatLower.includes('heif') || formatLower.includes('heic')) {
-        // 如果是HEIF/HEIC格式，强制转换为JPEG
-        console.log(`拦截到HEIF/HEIC格式的原图: ${formatLower}，转换为JPEG`);
-        ctx.image.jpeg({ 
-          quality: 85,
-          mozjpeg: true,
-          optimiseCoding: true,
-          trellisQuantisation: true 
-        });
-        const jpegResult = await ctx.image.toBuffer();
-        ctx.headers['Content-Type'] = 'image/jpeg';
-        ctx.headers['Content-Disposition'] = 'inline';
-        return { data: jpegResult, type: 'jpeg' };
-      }
-      
-      // 确保即使直接返回原图也设置正确的响应头
-      ctx.headers['Content-Type'] = this.getSafeMimeType(ctx.metadata.format!);
-      ctx.headers['Content-Disposition'] = 'inline'; // 强制浏览器显示而非下载
-      
-      return { data: buffer, type: ctx.metadata.format! };
+      console.log(`ImageProcessor.process: Original image format: ${finalFormat}`);
+      ctx.headers['Content-Type'] = this.getSafeMimeType(finalFormat);
+      ctx.headers['Content-Disposition'] = 'inline';
+      // Merge original headers (like ETag from S3) if any, but prioritize our Content-Type and Disposition
+      Object.assign(ctx.headers, originalHeaders, { 
+        'Content-Type': this.getSafeMimeType(finalFormat),
+        'Content-Disposition': 'inline'
+      });
+
+      console.log(`ImageProcessor.process: Returning original image with Content-Type: ${ctx.headers['Content-Type']}`);
+      return { data: buffer, type: finalFormat };
     }
 
     for (const action of enabledActions) {
-      if ((this.name === action) || (!action)) {
+      if ((this.name === action) || (!action) || action.trim() === '') {
         continue;
       }
-      // "<action-name>,<param-1>,<param-2>,..."
       const params = action.split(',');
       const name = params[0];
       const act = this.action(name);
       if (!act) {
-        throw new InvalidArgument(`Unkown action: "${name}"`);
+        console.error(`ImageProcessor.process: Unknown action during processing loop: "${name}"`);
+        throw new InvalidArgument(`Unknown action: "${name}"`);
       }
+      console.log(`ImageProcessor.process: Executing action "${name}" with params: ${params.slice(1).join(',')}`);
       await act.process(ctx, params);
+      console.log(`ImageProcessor.process: Finished action "${name}"`);
+      if (ctx.features[Features.ReturnInfo]) { 
+        console.log('ImageProcessor.process: ReturnInfo feature enabled, breaking action loop.');
+        break; 
+      }
+    }
 
-    if (ctx.features[Features.ReturnInfo]) { break; }
-  }
-  if (ctx.features[Features.AutoWebp]) { ctx.image.webp(); }
-  if (ctx.features[Features.ReturnInfo]) {
-    return { data: ctx.info, type: 'application/json' };
-  } else {
-    const { data, info } = await ctx.image.toBuffer({ resolveWithObject: true });
-    
-    // 确保设置正确的Content-Disposition，防止下载而非显示
-    if (!ctx.headers['Content-Disposition']) {
-      ctx.headers['Content-Disposition'] = 'inline';
+    if (ctx.features[Features.AutoWebp] && ctx.metadata.format !== 'webp') {
+      console.log('ImageProcessor.process: AutoWebp feature enabled and current format is not webp. Converting to WebP.');
+      ctx.image.webp({ quality: config.defaultQuality.webp }); // Use default webp quality from config
+      ctx.metadata.format = 'webp'; // Update metadata format
     }
-    
-    // 显式拦截HEIF/HEIC格式，强制转换为JPEG
-    if (info.format && (info.format.toLowerCase().includes('heif') || info.format.toLowerCase().includes('heic'))) {
-      console.log(`在最终输出阶段检测到禁止的格式 ${info.format}，强制转换为JPEG`);
-      // 重新进行处理，转换为JPEG
-      ctx.image.jpeg({ 
-        quality: 85,
-        mozjpeg: true,
-        optimiseCoding: true,
-        trellisQuantisation: true 
-      });
-      const jpegResult = await ctx.image.toBuffer();
-      ctx.headers['Content-Type'] = 'image/jpeg';
-      return { data: jpegResult, type: 'image/jpeg' };
+
+    if (ctx.features[Features.ReturnInfo]) {
+      console.log('ImageProcessor.process: Returning image info (JSON).');
+      ctx.headers['Content-Type'] = 'application/json';
+      return { data: ctx.info, type: 'application/json' };
+    } else {
+      console.log('ImageProcessor.process: Converting final image to buffer.');
+      const { data, info } = await ctx.image.toBuffer({ resolveWithObject: true });
+      console.log(`ImageProcessor.process: Final image buffer created. Sharp info: format=${info.format}, size=${info.size}, width=${info.width}, height=${info.height}`);
+
+      let finalOutputFormat = info.format;
+
+      // Double check for HEIF/HEIC and convert to JPEG if somehow it's the output format
+      if (finalOutputFormat && (finalOutputFormat.toLowerCase().includes('heif') || finalOutputFormat.toLowerCase().includes('heic'))) {
+        console.warn(`ImageProcessor.process: Detected HEIF/HEIC format (${finalOutputFormat}) in final output from Sharp. Forcing JPEG conversion.`);
+        const jpegBuffer = await sharp(data).jpeg({ quality: config.defaultQuality.jpeg, mozjpeg: true }).toBuffer();
+        finalOutputFormat = 'jpeg';
+        // ctx.headers['Content-Type'] = 'image/jpeg'; // Will be set by getSafeMimeType
+        console.log('ImageProcessor.process: Successfully re-converted to JPEG.');
+        // Return the re-converted JPEG data
+        ctx.headers['Content-Type'] = this.getSafeMimeType(finalOutputFormat);
+        ctx.headers['Content-Disposition'] = 'inline';
+        console.log(`ImageProcessor.process: Final headers after HEIC/HEIF re-conversion: ${JSON.stringify(ctx.headers)}`);
+        return { data: jpegBuffer, type: finalOutputFormat }; 
+      }
+      
+      // Set Content-Type based on the actual format returned by sharp.toBuffer()
+      ctx.headers['Content-Type'] = this.getSafeMimeType(finalOutputFormat);
+      ctx.headers['Content-Disposition'] = 'inline'; // Ensure inline display
+
+      console.log(`ImageProcessor.process: Final headers for response: ${JSON.stringify(ctx.headers)}`);
+      return { data: data, type: finalOutputFormat };
     }
-    
-    // 确保AVIF格式正确标记
-    if (info.format === 'avif' && !ctx.headers['Content-Type']) {
-      ctx.headers['Content-Type'] = 'image/avif';
-    }
-    
-    // 安全检查：确保任何输出都不是HEIF/HEIC格式
-    let safeType = info.format;
-    if (!safeType || safeType.toLowerCase().includes('heif') || safeType.toLowerCase().includes('heic')) {
-      safeType = 'jpeg';
-    }
-    
-    // 设置安全的MIME类型
-    const safeFormat = 'image/' + safeType;
-    ctx.headers['Content-Type'] = safeFormat;
-    
-    return { data: data, type: safeFormat };
-  }
   }
 
   public action(name: string): IAction {

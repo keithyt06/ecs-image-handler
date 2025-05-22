@@ -57,6 +57,7 @@ export interface IHttpHeaders {
 export interface IProcessResponse {
   readonly data: any;
   readonly type: string;
+  readonly headers?: IHttpHeaders;
 }
 
 /**

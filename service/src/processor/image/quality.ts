@@ -20,8 +20,19 @@ export class QualityAction extends BaseImageAction {
   public readonly name: string = 'quality';
 
   public beforeProcess(ctx: IImageContext, _2: string[], index: number): void {
-    if ('gif' === ctx.metadata.format) {
-      ctx.mask.disable(index);
+    // If the image is a GIF and we are not changing format, quality action is usually irrelevant or not applicable.
+    if (ctx.metadata.format && ctx.metadata.format.toLowerCase() === 'gif') {
+      // Check if a format action to something other than GIF is also present and enabled
+      let willChangeFormatFromGif = false;
+      ctx.mask.forEachAction((actionName, enabled) => {
+        if (enabled && actionName.startsWith('format,') && !actionName.includes(',gif')) {
+          willChangeFormatFromGif = true;
+        }
+      });
+      if (!willChangeFormatFromGif) {
+        console.log('QualityAction.beforeProcess: GIF format detected and no conversion to another format. Disabling quality action.');
+        ctx.mask.disable(index);
+      }
     }
   }
 
@@ -54,85 +65,46 @@ export class QualityAction extends BaseImageAction {
   }
   public async process(ctx: IImageContext, params: string[]): Promise<void> {
     const opt = this.validate(params);
-    const metadata = ctx.metadata; // If the format is changed before.
-    
-    // 获取最终质量值，基于格式设置不同的默认值
+    const metadata = ctx.metadata; // This should reflect the target format if FormatAction ran.
     let qualityValue: number;
-    
-    if (JPEG === metadata.format || JPG === metadata.format) {
-      qualityValue = opt.q ?? opt.Q ?? config.defaultQuality.jpeg; 
-      let q = 72; // Default base for relative calculation if not specified by Q or config
-      if (opt.q) { // Relative quality
-        const buffer = await ctx.image.toBuffer();
-        const estq = jpeg.decode(buffer).quality;
-        q = Math.round(estq * opt.q / 100);
-      } else if (opt.Q) { // Absolute quality from Q_ param
-        q = opt.Q;
-      } else { // Default absolute quality from config
-        q = qualityValue;
-      }
-      ctx.image.jpeg({ 
-        quality: q, 
-        mozjpeg: true,
-        optimiseCoding: true,
-        trellisQuantisation: true
-      });
-      
-      ctx.headers['Content-Type'] = 'image/jpeg';
-    } else if (WEBP === metadata.format) {
-      qualityValue = opt.q ?? opt.Q ?? config.defaultQuality.webp;
-      ctx.image.webp({ 
-        quality: qualityValue, 
-        effort: 4, 
-        alphaQuality: 100, 
-        smartSubsample: true 
-      });
-      
-      ctx.headers['Content-Type'] = 'image/webp';
-    } else if ('avif' === metadata.format) {
-      qualityValue = opt.q ?? opt.Q ?? config.defaultQuality.avif;
-      ctx.image.avif({ 
-        quality: qualityValue, 
-        effort: 1, 
-        chromaSubsampling: '4:2:0' 
-      });
-      
-      ctx.headers['Content-Type'] = 'image/avif';
-    } else if ('png' === metadata.format) {
-      qualityValue = opt.q ?? opt.Q ?? config.defaultQuality.png;
-      // Convert quality (1-100) to PNG compressionLevel (0-9 for sharp, but we'll use 1-9)
-      // Higher quality means lower compressionLevel value for sharp.png()
-      // So, 100 quality = level 1 (least compression), 1 quality = level 9 (most compression)
-      // However, sharp.png().compressionLevel is 0-9 where 9 is highest compression.
-      // Let's map: quality 100 -> effort/compressionLevel low (e.g. 1-3)
-      //            quality 1   -> effort/compressionLevel high (e.g. 9)
-      // A simple mapping: (100-quality)/10, clamped. Let's use effort for png like in format.ts
-      // For PNG, 'quality' is more about processing effort vs file size for lossless.
-      // Sharp's PNG 'quality' param (1-100) itself controls quantization if palette is true.
-      // Since palette is false, we use compressionLevel and effort.
-      // Let's use the qualityValue to adjust effort or compressionLevel.
-      // A simpler approach: use the qualityValue for 'effort' if applicable or map to compressionLevel.
-      // The existing format.ts uses fixed effort/compressionLevel for PNG.
-      // For consistency, if QualityAction is used for PNG, we can make it influence compressionLevel.
-      const compressionLevel = Math.max(0, Math.min(9, Math.floor(9 - (qualityValue -1) / 11))); // maps 1-100 to 9-0
 
-      ctx.image.png({ 
-        compressionLevel: compressionLevel, // quality 100 -> CL 0, quality 1 -> CL 9
-        adaptiveFiltering: true,
-        effort: Math.max(1, Math.min(10, Math.ceil(qualityValue / 10))), // quality 1-100 to effort 1-10
-        palette: false
-      });
-      
-      ctx.headers['Content-Type'] = 'image/png';
-    } else if ('gif' === metadata.format) {
-      // 为GIF设置默认参数
-      ctx.headers['Content-Type'] = 'image/gif';
+    console.log(`QualityAction.process: Processing quality for format: ${metadata.format}. Requested q=${opt.q}, Q=${opt.Q}`);
+
+    try {
+      if (JPEG === metadata.format || JPG === metadata.format) {
+        qualityValue = opt.q ?? opt.Q ?? config.defaultQuality.jpeg;
+        let q = qualityValue; // Use absolute quality directly if Q or default, otherwise calculate from relative q
+        if (opt.q && !opt.Q) { // Only calculate if relative q is given and absolute Q is not
+          const buffer = await ctx.image.clone().jpeg({ quality: 100 }).toBuffer(); // Get a baseline
+          const estq = jpeg.decode(buffer).quality; //This jpeg.decode might not be perfectly accurate
+          q = Math.round(estq * opt.q / 100);
+          console.log(`QualityAction.process: JPEG relative quality: original_est_q=${estq}, requested_relative_q=${opt.q}, final_q=${q}`);
+        }
+        console.log(`QualityAction.process: Applying JPEG quality: ${q}`);
+        ctx.image.jpeg({ quality: q, mozjpeg: true, optimiseCoding: true, trellisQuantisation: true });
+      } else if (WEBP === metadata.format) {
+        qualityValue = opt.q ?? opt.Q ?? config.defaultQuality.webp;
+        console.log(`QualityAction.process: Applying WebP quality: ${qualityValue}`);
+        ctx.image.webp({ quality: qualityValue, effort: 4, alphaQuality: 100, smartSubsample: true });
+      } else if ('avif' === metadata.format) {
+        qualityValue = opt.q ?? opt.Q ?? config.defaultQuality.avif;
+        console.log(`QualityAction.process: Applying AVIF quality: ${qualityValue}, effort: 4, chromaSubsampling: 4:2:0`);
+        ctx.image.avif({ quality: qualityValue, effort: 4, chromaSubsampling: '4:2:0', lossless: false });
+      } else if ('png' === metadata.format) {
+        qualityValue = opt.q ?? opt.Q ?? config.defaultQuality.png;
+        const compressionLevel = Math.max(0, Math.min(9, Math.floor(9 - (qualityValue - 1) / 11)));
+        const effort = Math.max(1, Math.min(10, Math.ceil(qualityValue / 10)));
+        console.log(`QualityAction.process: Applying PNG quality (interpreted as CL=${compressionLevel}, effort=${effort}) from input quality ${qualityValue}`);
+        ctx.image.png({ compressionLevel: compressionLevel, adaptiveFiltering: true, effort: effort, palette: false });
+      } else {
+        console.log(`QualityAction.process: No specific quality processing for format ${metadata.format}.`);
+      }
+      // Content-Type should be set by ImageProcessor based on the final buffer information.
+      // ctx.headers['Content-Disposition'] = 'inline'; // This can also be centralized in ImageProcessor
+    } catch (error) {
+      console.error(`QualityAction.process: Error during format conversion/quality setting for ${metadata.format} with quality ${opt.q || opt.Q}:`, error);
+      // Do not re-throw, allow pipeline to continue if possible, or let ImageProcessor handle final output.
+      // If a specific format conversion failed here, ImageProcessor might output original or last successful state.
     }
-    
-    // 确保所有格式都有内联显示指令
-    ctx.headers['Content-Disposition'] = 'inline';
-    
-    // 添加缓存控制头
-    ctx.headers['Cache-Control'] = 'public, max-age=31536000';
   }
 }

@@ -277,9 +277,11 @@ function getOptimalFormat(acceptHeader: string): string {
 
 async function ossprocess(ctx: Koa.ParameterizedContext, beforeGetFn?: () => void):
 Promise<{ data: any; type: string; headers: IHttpHeaders }> {
-  const { uri, actions } = parseRequest(ctx.path, ctx.query);
+  console.log(`ossprocess: Received request for path: ${ctx.path}, query: ${JSON.stringify(ctx.query)}`);
+  const { uri, actions: initialActions } = parseRequest(ctx.path, ctx.query);
+  let actions = [...initialActions]; // Clone to allow modification
+  console.log(`ossprocess: Parsed request to uri: ${uri}, initial actions: ${JSON.stringify(actions)}`);
   
-  // 检查是否已指定format操作
   let hasFormat = false;
   let hasQuality = false;
   let hasResize = false;
@@ -307,17 +309,13 @@ Promise<{ data: any; type: string; headers: IHttpHeaders }> {
   
   // 获取最佳格式
   const optimalFormat = getOptimalFormat(acceptHeader);
-  console.log(`基于Accept头选择的最佳格式: ${optimalFormat || '无'}`);
+  console.log(`ossprocess: Optimal format from Accept header: ${optimalFormat || 'none'}`);
   
-  // 如果有resize操作 或 其他任何操作，添加format和quality
-  if (actions.length > 0 && (hasResize || actions.length > 1)) {
-    // 如果没有指定format且有最优格式，添加format操作
+  if (actions.length > 0 && (hasResize || actions.some(a => a.trim() !== '' && a !== 'image'))) { // More robust check for meaningful actions
     if (!hasFormat && optimalFormat) {
       actions.push(`format,${optimalFormat}`);
-      console.log(`基于Accept头添加format操作: ${optimalFormat}`);
+      console.log(`ossprocess: Injected format action: format,${optimalFormat}`);
     }
-    
-    // 如果没有指定quality，添加默认质量参数
     if (!hasQuality) {
       let defaultQualityValue: number;
       // 确定目标格式以选择默认质量
@@ -356,46 +354,46 @@ Promise<{ data: any; type: string; headers: IHttpHeaders }> {
       }
       
       actions.push(`quality,q_${defaultQualityValue}`);
-      console.log(`已注入默认质量参数 quality,q_${defaultQualityValue} 针对于格式 ${targetFormatForQuality || '原始格式'}`);
+      console.log(`ossprocess: Injected default quality action: quality,q_${defaultQualityValue} for target format ${targetFormatForQuality || 'original'}`);
     }
   }
+  console.log(`ossprocess: Final actions to be processed: ${JSON.stringify(actions)}`);
   
-  // 只通过 x-bucket 头选择存储桶，不再解析路径
   const bs = getBufferStore(ctx);
-  if (actions.length > 1) {
-    const processor = getProcessor(actions[0]);
+  // if (actions.length > 1) { // This condition was problematic. Check if any action other than 'image' exists.
+  const meaningfulActions = actions.filter(a => a.trim() !== '' && a !== 'image');
+  if (meaningfulActions.length > 0) {
+    console.log(`ossprocess: Processing with actions: ${JSON.stringify(actions)}`);
+    const processor = getProcessor(actions[0] === 'image' && meaningfulActions.length > 0 ? 'image' : meaningfulActions[0].split(',')[0]);
     const context = await processor.newContext(uri, actions, bs);
-    const { data, type } = await processor.process(context);
+    const { data, type, headers: processorHeaders } = await processor.process(context);
     
-    // 确保设置正确的Content-Type和额外头信息
-    const headers: IHttpHeaders = {
-      ...context.headers,
-      'Content-Type': getMimeType(type),
+    const finalHeaders: IHttpHeaders = {
+      ...processorHeaders, // Headers from the processor take precedence (like Content-Type set by ImageProcessor)
       'Cache-Control': 'public, max-age=31536000',
-      'Access-Control-Allow-Origin': '*'
+      'Access-Control-Allow-Origin': '*',
+      'Vary': 'Accept', // Crucial for CDN caching based on Accept header
+      'Content-Disposition': 'inline' // Ensure inline display by default
     };
-    
-    return { data, type, headers };
+    // Ensure Content-Type from processor is not overridden by a generic getMimeType if processor set it.
+    if (!processorHeaders || !processorHeaders['Content-Type']){
+        finalHeaders['Content-Type'] = getMimeType(type);
+    }
+
+    console.log(`ossprocess: Returning processed image. Type: ${type}, Headers: ${JSON.stringify(finalHeaders)}`);
+    return { data, type, headers: finalHeaders };
   } else {
-    // 获取原图，只使用originalType，避免未使用变量警告
-    const { type: originalType } = await bs.get(uri, beforeGetFn);
-    
-    // 使用之前获取的acceptHeader，避免重复获取
-    console.log(`原图处理: 尝试应用Accept头优化，原始格式: ${originalType}`);
-    
-    // 始终为原图应用格式转换，确保基于Accept头返回最佳格式
-    console.log(`对原图进行格式转换: ${originalType} -> ${optimalFormat || 'jpeg'}`);
-    
-    // 创建临时处理链
+    console.log(`ossprocess: Processing as original image request (or only Accept header optimization). URI: ${uri}`);
+    const { buffer: originalBuffer, type: originalType, headers: originalS3Headers } = await bs.get(uri, beforeGetFn);
+    console.log(`ossprocess: Original image fetched. Type from store: ${originalType}, S3 Headers: ${JSON.stringify(originalS3Headers)}`);
+
     const tempActions = [];
+    const targetFormatForOriginal = optimalFormat || 'jpeg'; // Default to jpeg if no optimalFormat
+    console.log(`ossprocess: Optimizing original image to: ${targetFormatForOriginal}`);
+    tempActions.push(`format,${targetFormatForOriginal}`);
     
-    // 添加格式转换动作
-    const targetFormat = optimalFormat || 'jpeg'; // 如果Accept头没有，则默认为jpeg
-    tempActions.push(`format,${targetFormat}`);
-    
-    // 为原图转换添加质量参数，同样从config读取
     let defaultQualityForOriginal: number;
-    switch (targetFormat) {
+    switch (targetFormatForOriginal) {
       case 'avif':
         defaultQualityForOriginal = config.defaultQuality.avif;
         break;
@@ -413,24 +411,24 @@ Promise<{ data: any; type: string; headers: IHttpHeaders }> {
         defaultQualityForOriginal = config.defaultQuality.jpeg; // Fallback
     }
     tempActions.push(`quality,q_${defaultQualityForOriginal}`);
-    console.log(`原图处理：已注入默认质量 quality,q_${defaultQualityForOriginal} 针对于转换格式 ${targetFormat}`);
-    
-    // 使用主处理器处理图像
+    console.log(`ossprocess: Added actions for original image optimization: ${JSON.stringify(tempActions)}`);
+
     const processor = getProcessor('image');
     const context = await processor.newContext(uri, tempActions, bs);
-    const { data, type } = await processor.process(context);
+    const { data, type, headers: optimizedOriginalHeaders } = await processor.process(context);
     
-    // 确保设置正确的Content-Type和额外头信息
-    const enhancedHeaders: IHttpHeaders = {
-      ...context.headers,
-      'Content-Type': getMimeType(type),
-      'Content-Disposition': 'inline', // 明确指示浏览器显示而非下载
+    const finalEnhancedHeaders: IHttpHeaders = {
+      ...optimizedOriginalHeaders,
+      ...originalS3Headers,
+      'Content-Type': (optimizedOriginalHeaders && optimizedOriginalHeaders['Content-Type']) ? optimizedOriginalHeaders['Content-Type'] : getMimeType(type),
+      'Content-Disposition': 'inline',
       'Cache-Control': 'public, max-age=31536000',
       'Access-Control-Allow-Origin': '*',
-      'Vary': 'Accept' // 允许基于Accept头的缓存变化
+      'Vary': 'Accept'
     };
-    
-    return { data, type, headers: enhancedHeaders };
+
+    console.log(`ossprocess: Returning optimized original image. Type: ${type}, Headers: ${JSON.stringify(finalEnhancedHeaders)}`);
+    return { data, type, headers: finalEnhancedHeaders };
   }
 }
 
