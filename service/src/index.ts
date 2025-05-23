@@ -164,6 +164,7 @@ async function ossprocess(ctx: Koa.ParameterizedContext, beforeGetFn?: () => voi
 Promise<{ data: any; type: string; headers: IHttpHeaders }> {
   const { uri, actions: originalActions } = parseRequest(ctx.path, ctx.query);
   let actions = [...originalActions]; // Mutable copy for processing
+  let optimalFormat = ''; // Declare optimalFormat here
 
   let processorName: string | undefined;
   let operationActions: string[] = [];
@@ -205,37 +206,37 @@ Promise<{ data: any; type: string; headers: IHttpHeaders }> {
   const hasActualOperations = operationActions.length > 0;
 
   // Inject format and quality if it's not a style processor and there are operations, or if optimalFormat is AVIF (implying a conversion preference)
-  if (!isStyleProcessor && (hasActualOperations || optimalFormat === 'avif')) {
-    let optimalFormat = '';
+  if (!isStyleProcessor && (hasActualOperations || optimalFormat === 'avif')) { // Now optimalFormat can be accessed here
+    // optimalFormat is determined within this block based on Accept header, so the outer optimalFormat is primarily for the AVIF check in the condition
+    // We should redefine or update the outer optimalFormat here based on Accept header for clarity
+    let localOptimalFormat = ''; // Use a local variable for this block's scope
     const accept = ctx.get('Accept');
     if (accept) {
-      if (accept.includes('image/avif')) optimalFormat = 'avif';
-      else if (accept.includes('image/webp')) optimalFormat = 'webp';
+      if (accept.includes('image/avif')) localOptimalFormat = 'avif';
+      else if (accept.includes('image/webp')) localOptimalFormat = 'webp';
     }
 
-    if (optimalFormat === 'heif') {
-      optimalFormat = 'avif'; // Force HEIF to AVIF
+    if (localOptimalFormat === 'heif') {
+      localOptimalFormat = 'avif'; // Force HEIF to AVIF
       console.log(`ossprocess: Overriding HEIF to AVIF for URI: ${uri}`);
     }
 
-    // Check format and quality based on operationActions if they are the true list of operations
     const effectiveActionsForCheck = processorName === getProcessor('image').name && actions[0] !== processorName ? actions : operationActions;
 
     const formatActionExists = effectiveActionsForCheck.some(a => a.startsWith('format,'));
-    if (!formatActionExists && optimalFormat) {
-      const newFormatAction = `format,${optimalFormat}`;
-      actions.push(newFormatAction); // Add to the main list of actions being processed
+    if (!formatActionExists && localOptimalFormat) { // use localOptimalFormat
+      const newFormatAction = `format,${localOptimalFormat}`;
+      actions.push(newFormatAction);
       if (processorName === getProcessor('image').name && actions[0] !== processorName) {
-        // if operations did not include processor name, it's added to operationActions implicitly by adding to actions.
       } else {
-         operationActions.push(newFormatAction); // Also keep operationActions in sync if it was separate
+         operationActions.push(newFormatAction);
       }
       console.log(`ossprocess: Injected format action: ${newFormatAction} for URI: ${uri}`);
     }
 
     const qualityActionExists = effectiveActionsForCheck.some(a => a.startsWith('quality,'));
     if (!qualityActionExists) {
-      let targetFormatForQuality = optimalFormat;
+      let targetFormatForQuality = localOptimalFormat; // use localOptimalFormat
       const finalFormatActionDetails = actions.find(a => a.startsWith('format,'));
       if (finalFormatActionDetails) {
         targetFormatForQuality = finalFormatActionDetails.split(',')[1];
@@ -246,7 +247,6 @@ Promise<{ data: any; type: string; headers: IHttpHeaders }> {
         const newQualityAction = `quality,${defaultQualityValue}`;
         actions.push(newQualityAction);
         if (processorName === getProcessor('image').name && actions[0] !== processorName) {
-            // as above
         } else {
             operationActions.push(newQualityAction);
         }
