@@ -1,4 +1,4 @@
-FROM public.ecr.aws/docker/library/node:14-alpine3.16 as builder
+FROM public.ecr.aws/docker/library/node:18-alpine as builder
 
 WORKDIR /app
 
@@ -17,7 +17,7 @@ COPY . .
 # 使用TypeScript编译器编译代码
 RUN npx tsc
 
-FROM public.ecr.aws/docker/library/node:14-alpine3.16
+FROM public.ecr.aws/docker/library/node:18-alpine
 
 WORKDIR /app
 
