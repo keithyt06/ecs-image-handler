@@ -55,10 +55,13 @@ export class FormatAction extends BaseImageAction {
       ctx.image.jpeg();
     } else if (opt.format === 'png') {
       ctx.metadata.format = 'png';
-      ctx.image.png({ effort: 2, quality: 80 });
+      ctx.image.png({ quality: 80, effort: 2 });
     } else if (opt.format === 'webp') {
       ctx.metadata.format = 'webp';
-      ctx.image.webp({ effort: 2, quality: 80 });
+      ctx.image.webp({ quality: 80, effort: 2 });
+    } else if (opt.format === 'avif') {
+      ctx.metadata.format = 'avif';
+      ctx.image.avif({ quality: 80, effort: 2 });
     }
 
   }
@@ -70,4 +73,5 @@ const SUPPORTED_FORMAT = [
   'png',
   'webp',
   'gif',
+  'avif',
 ];

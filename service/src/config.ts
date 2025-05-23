@@ -13,6 +13,7 @@ const {
   CACHE_TTL_SEC,
   CACHE_MAX_ITEMS,
   CACHE_MAX_SIZE_MB,
+  ALLOW_DIRECT_ACCESS,
 } = process.env;
 
 export interface IConfig {
@@ -29,6 +30,7 @@ export interface IConfig {
   CACHE_TTL_SEC: number;
   CACHE_MAX_ITEMS: number;
   CACHE_MAX_SIZE_MB: number;
+  allowDirectAccess: boolean;
 }
 
 function parseInt(s: string) {
@@ -62,6 +64,7 @@ const conf: IConfig = {
   CACHE_TTL_SEC: parseInt(CACHE_TTL_SEC ?? '300'),
   CACHE_MAX_ITEMS: parseInt(CACHE_MAX_ITEMS ?? '10000'),
   CACHE_MAX_SIZE_MB: parseInt(CACHE_MAX_SIZE_MB ?? '1024'),
+  allowDirectAccess: ['yes', '1', 'true'].includes((ALLOW_DIRECT_ACCESS ?? '').toLowerCase()),
 };
 
 export default conf;

@@ -77,6 +77,12 @@ export function parseRequest(uri: string, query: ParsedUrlQuery): { uri: string;
   const parts = uri.split(/@?!/, 2);
   if (parts.length === 1) {
     const x_oss_process = (query['x-oss-process'] as string) ?? '';
+    if (config.allowDirectAccess && !x_oss_process) {
+      return {
+        uri: uri,
+        actions: [],
+      };
+    }
     return {
       uri: uri,
       actions: x_oss_process.split('/').filter(x => x),
