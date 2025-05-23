@@ -244,12 +244,8 @@ Promise<{ data: any; type: string; headers: IHttpHeaders }> {
 
       if (targetFormatForQuality) {
         const defaultQualityValue = getDefaultQualityForFormat(targetFormatForQuality);
-        const newQualityAction = `quality,${defaultQualityValue}`;
+        const newQualityAction = `quality,q_${defaultQualityValue}`;
         actions.push(newQualityAction);
-        if (processorName === getProcessor('image').name && actions[0] !== processorName) {
-        } else {
-            operationActions.push(newQualityAction);
-        }
         console.log(`ossprocess: Injected quality action: ${newQualityAction} for format ${targetFormatForQuality}, URI: ${uri}`);
       }
     }
