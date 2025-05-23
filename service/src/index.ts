@@ -160,6 +160,46 @@ function getDefaultQualityForFormat(format: string): number {
   }
 }
 
+// Helper function to normalize MIME types and convert HEIF/HEIC to AVIF
+async function normalizeAndConvertImageType(data: Buffer, type: string, uri: string): Promise<{ data: Buffer; type: string }> {
+  let normalizedType = type.toLowerCase().replace(/^image\//, ''); // Get the format name, e.g., 'jpeg', 'png'
+
+  // Check for HEIF/HEIC
+  if (normalizedType === 'heif' || normalizedType === 'heic') {
+    console.log(`normalizeAndConvertImageType: Detected HEIF/HEIC format for URI: ${uri}. Converting to AVIF.`);
+    try {
+      const avifBuffer = await sharp(data).avif().toBuffer();
+      return { data: avifBuffer, type: 'image/avif' };
+    } catch (conversionError) {
+      console.error(`normalizeAndConvertImageType: Error converting HEIF/HEIC to AVIF for URI: ${uri}. Falling back to JPEG.`, conversionError);
+      // Fallback to JPEG if AVIF conversion fails for some reason
+      try {
+        const jpegBuffer = await sharp(data).jpeg().toBuffer();
+        return { data: jpegBuffer, type: 'image/jpeg' };
+      } catch (jpegConversionError) {
+        console.error(`normalizeAndConvertImageType: Error converting HEIF/HEIC to JPEG (fallback) for URI: ${uri}. Returning original.`, jpegConversionError);
+        return { data, type }; // Return original if all conversions fail
+      }
+    }
+  }
+
+  // Normalize other common image types to standard MIME types
+  // (Copied from your provided logic, with minor adjustments for the return format)
+  if (normalizedType === 'jpeg' || normalizedType === 'jpg') return { data, type: 'image/jpeg' };
+  if (normalizedType === 'png') return { data, type: 'image/png' };
+  if (normalizedType === 'webp') return { data, type: 'image/webp' };
+  if (normalizedType === 'avif') return { data, type: 'image/avif' };
+  if (normalizedType === 'gif') return { data, type: 'image/gif' };
+  if (normalizedType === 'tiff' || normalizedType === 'tif') return { data, type: 'image/tiff' };
+  if (normalizedType === 'svg') return { data, type: 'image/svg+xml' };
+
+  // If the original type already had 'image/', use it, otherwise prepend it.
+  if (type.startsWith('image/')) {
+    return { data, type };
+  }
+  return { data, type: `image/${normalizedType}` };
+}
+
 async function ossprocess(ctx: Koa.ParameterizedContext, beforeGetFn?: () => void):
 Promise<{ data: any; type: string; headers: IHttpHeaders }> {
   const { uri, actions: originalActions } = parseRequest(ctx.path, ctx.query);
@@ -183,8 +223,10 @@ Promise<{ data: any; type: string; headers: IHttpHeaders }> {
   } else if (config.allowDirectAccess) {
     // No actions and direct access is allowed - serve original image
     const bs = getBufferStore(ctx);
-    const { buffer, type, headers } = await bs.get(uri, beforeGetFn);
-    return { data: buffer, type: type, headers: headers };
+    let { buffer, type: initialType, headers } = await bs.get(uri, beforeGetFn);
+    // Apply normalization and HEIF->AVIF conversion for direct access as well
+    const finalResult = await normalizeAndConvertImageType(buffer, initialType, uri);
+    return { data: finalResult.data, type: finalResult.type, headers: headers };
   }
   
   // If no processor could be determined (e.g. actions was empty and direct access not allowed), this will be an issue.
@@ -221,7 +263,7 @@ Promise<{ data: any; type: string; headers: IHttpHeaders }> {
       console.log(`ossprocess: Overriding HEIF to AVIF for URI: ${uri}`);
     }
 
-    const effectiveActionsForCheck = processorName === getProcessor('image').name && actions[0] !== processorName ? actions : operationActions;
+    const effectiveActionsForCheck = processorName === getProcessor('image').name && originalActions[0] !== processorName ? actions : operationActions;
 
     const formatActionExists = effectiveActionsForCheck.some(a => a.startsWith('format,'));
     if (!formatActionExists && localOptimalFormat) { // use localOptimalFormat
@@ -258,7 +300,7 @@ Promise<{ data: any; type: string; headers: IHttpHeaders }> {
   // It should be [processorName, ...actual_operation_strings_including_injected_ones]
   // `actions` array has been modified with injections. If it didn't start with processorName, we prepend it.
   let finalActionsForNewContext: string[];
-  if (actions.length > 0 && actions[0] === processorName) {
+  if (originalActions.length > 0 && originalActions[0] === processorName) {
     finalActionsForNewContext = actions;
   } else {
     // This happens if processor was defaulted to 'image' and original actions were just operations.
@@ -268,8 +310,12 @@ Promise<{ data: any; type: string; headers: IHttpHeaders }> {
   // For style processor, actions would be ['style', 'stylename'], injection is skipped. So this is fine.
 
   const context = await processor.newContext(uri, finalActionsForNewContext, bs);
-  const { data, type } = await processor.process(context);
-  return { data, type, headers: context.headers };
+  let { data: processedData, type: processedType } = await processor.process(context);
+  
+  // Apply final normalization and HEIF->AVIF conversion
+  const finalResult = await normalizeAndConvertImageType(processedData, processedType, uri);
+
+  return { data: finalResult.data, type: finalResult.type, headers: context.headers };
 }
 
 async function validatePostRequest(ctx: Koa.ParameterizedContext) {
