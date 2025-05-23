@@ -13,7 +13,7 @@ import config from './config';
 import debug from './debug';
 import { bufferStore, getBufferStores, getProcessor, parseRequest, setMaxGifSizeMB, setMaxGifPages } from './default';
 import * as is from './is';
-import { IHttpHeaders, InvalidArgument, IProcessor } from './processor';
+import { IHttpHeaders, InvalidArgument } from './processor';
 import { IBufferStore } from './store';
 
 const MB = 1048576;
