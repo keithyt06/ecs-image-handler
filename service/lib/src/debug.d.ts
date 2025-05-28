@@ -57,4 +57,10 @@ export interface IDebugInfo {
     };
     sharp: ISharpInfo;
 }
+interface CacheObject {
+    body: any;
+    type: string;
+    headers: any;
+}
 export default function debug(lruCache?: LRUCache<string, CacheObject>): IDebugInfo;
+export {};

@@ -1,7 +1,6 @@
 import * as child_process from 'child_process';
 import { IAction, InvalidArgument, IActionOpts, ReadOnly } from '..';
 import { IExtendedProcessContext } from './context';
-import * as is from '../../is';
 
 export interface VideoSnapshotOpts extends IActionOpts {
   t: number; // 指定截图时间, 单位：s

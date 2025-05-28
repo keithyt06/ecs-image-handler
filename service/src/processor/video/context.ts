@@ -1,4 +1,4 @@
-import { IProcessContext, IProcessResponse } from '..';
+import { IProcessContext } from '..';
 
 /**
  * 扩展处理上下文接口，添加结果属性

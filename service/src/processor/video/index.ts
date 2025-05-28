@@ -1,4 +1,3 @@
-import * as child_process from 'child_process';
 import { IAction, InvalidArgument, IProcessContext, IProcessor, IProcessResponse } from '..';
 import { ActionMask } from '../image/_base';
 import { IBufferStore } from '../../store';

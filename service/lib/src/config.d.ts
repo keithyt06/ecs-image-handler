@@ -14,6 +14,14 @@ export interface IConfig {
     CACHE_MAX_ITEMS: number;
     CACHE_MAX_SIZE_MB: number;
     allowDirectAccess: string;
+    video: {
+        maxOutputSizeMB: number;
+        maxProcessingTimeSeconds: number;
+        defaultCRF: number;
+        defaultPreset: string;
+        supportedInputFormats: string[];
+        supportedOutputFormats: string[];
+    };
 }
 declare const conf: IConfig;
 export default conf;

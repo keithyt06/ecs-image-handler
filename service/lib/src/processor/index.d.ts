@@ -3,7 +3,7 @@ import { IBufferStore } from '../store';
 /**
  * A utility to make an object immutable.
  */
-export declare type ReadOnly<T> = {
+export type ReadOnly<T> = {
     readonly [K in keyof T]: ReadOnly<T[K]>;
 };
 export interface IActionMask {

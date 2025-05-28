@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="jest tests" tests="12" failures="2" errors="0" time="63.166">
+  <testsuite name="undefined" errors="0" failures="0" skipped="0" timestamp="2025-05-28T14:56:59" time="0.833" tests="6">
+    <testcase classname=" ActionMask all enabled by default" name=" ActionMask all enabled by default" time="0.006">
+    </testcase>
+    <testcase classname=" ActionMask getAction" name=" ActionMask getAction" time="0.004">
+    </testcase>
+    <testcase classname=" ActionMask enable/disable" name=" ActionMask enable/disable" time="0.001">
+    </testcase>
+    <testcase classname=" ActionMask forEach enable/disable" name=" ActionMask forEach enable/disable" time="0.001">
+    </testcase>
+    <testcase classname=" ActionMask index out of range" name=" ActionMask index out of range" time="0.01">
+    </testcase>
+    <testcase classname=" split1 split" name=" split1 split" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="undefined" errors="0" failures="2" skipped="2" timestamp="2025-05-28T14:56:59" time="1.156" tests="6">
+    <testcase classname=" local store" name=" local store" time="0.003">
+      <failure>Error: ENOENT: no such file or directory, open &apos;/Users/keithyu/Documents/code/ecs-image-handler/service/test/fixtures/example.jpg&apos;
+    at open (node:internal/fs/promises:634:25)
+    at Object.readFile (node:internal/fs/promises:1238:14)
+    at LocalStore.get (/Users/keithyu/Documents/code/ecs-image-handler/service/src/store.ts:45:15)
+    at Object.&lt;anonymous&gt; (/Users/keithyu/Documents/code/ecs-image-handler/service/test/store.test.ts:7:22)</failure>
+    </testcase>
+    <testcase classname=" local store shortcut" name=" local store shortcut" time="0.01">
+      <failure>Error: ENOENT: no such file or directory, open &apos;/Users/keithyu/Documents/code/ecs-image-handler/service/test/fixtures/example.jpg&apos;
+    at open (node:internal/fs/promises:634:25)
+    at Object.readFile (node:internal/fs/promises:1238:14)
+    at LocalStore.get (/Users/keithyu/Documents/code/ecs-image-handler/service/src/store.ts:45:15)
+    at Object.&lt;anonymous&gt; (/Users/keithyu/Documents/code/ecs-image-handler/service/test/store.test.ts:15:22)</failure>
+    </testcase>
+    <testcase classname=" s3 store shortcut" name=" s3 store shortcut" time="0.017">
+    </testcase>
+    <testcase classname=" MemKV Store" name=" MemKV Store" time="0.001">
+    </testcase>
+    <testcase classname=" s3 store" name=" s3 store" time="0">
+      <skipped/>
+    </testcase>
+    <testcase classname=" dynamodb store" name=" dynamodb store" time="0">
+      <skipped/>
+    </testcase>
+  </testsuite>
+</testsuites>
