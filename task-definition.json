@@ -1,0 +1,60 @@
+{
+  "family": "ecs-image-handler-test",
+  "networkMode": "awsvpc",
+  "taskRoleArn": "arn:aws:iam::057313215210:role/ecsTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "ecs-image-handler",
+      "image": "057313215210.dkr.ecr.us-east-1.amazonaws.com/ecs-image-handler:latest",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 8080,
+          "hostPort": 8080,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        {
+          "name": "REGION",
+          "value": "us-east-1"
+        },
+        {
+          "name": "AWS_REGION",
+          "value": "us-east-1"
+        },
+        {
+          "name": "SRC_BUCKET",
+          "value": "new-ue1-img"
+        },
+        {
+          "name": "STYLE_TABLE_NAME",
+          "value": "ecs-image-handler-style-table"
+        },
+        {
+          "name": "CONFIG_JSON_PARAMETER_NAME",
+          "value": "/ecs-image-handler/config"
+        },
+        {
+          "name": "AWS_SDK_LOAD_CONFIG",
+          "value": "1"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/ecs-image-handler-test",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs",
+          "awslogs-create-group": "true"
+        }
+      }
+    }
+  ],
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
+  "cpu": "1024",
+  "memory": "2048",
+  "executionRoleArn": "arn:aws:iam::057313215210:role/ecsTaskExecutionRole"
+}

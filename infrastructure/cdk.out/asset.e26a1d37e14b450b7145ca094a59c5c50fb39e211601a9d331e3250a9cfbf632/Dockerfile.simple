@@ -1,0 +1,22 @@
+FROM node:14-alpine
+
+WORKDIR /app
+
+# 复制编译后的文件和依赖
+COPY package*.json ./
+COPY lib/src/ ./
+COPY lib/src/processor/ ./processor/
+
+# 安装生产依赖
+RUN npm install --production
+
+# 设置环境变量
+ENV NODE_ENV=production
+ENV AWS_SDK_LOAD_CONFIG=1
+ENV AUTO_AVIF=true
+
+# 暴露端口
+EXPOSE 8080
+
+# 启动应用
+CMD ["node", "index.js"]

@@ -1,0 +1,36 @@
+{
+  "version": "41.0.0",
+  "files": {
+    "30b8403724ca12d84b6e09723284b281c9a69cbed5c93bbd5992f19435ae8a2c": {
+      "displayName": "ecs-image-handler-stack Template",
+      "source": {
+        "path": "ecs-image-handler-stack.template.json",
+        "packaging": "file"
+      },
+      "destinations": {
+        "057313215210-us-west-2": {
+          "bucketName": "cdk-hnb659fds-assets-057313215210-us-west-2",
+          "objectKey": "30b8403724ca12d84b6e09723284b281c9a69cbed5c93bbd5992f19435ae8a2c.json",
+          "region": "us-west-2",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::057313215210:role/cdk-hnb659fds-file-publishing-role-057313215210-us-west-2"
+        }
+      }
+    }
+  },
+  "dockerImages": {
+    "3fb194a0eb37cedb6720ad5adb808ed5b3edc63d6bfd17ff612b6f929988610b": {
+      "displayName": "ECSImageHandler/Service/TaskDef/web/AssetImage",
+      "source": {
+        "directory": "asset.3fb194a0eb37cedb6720ad5adb808ed5b3edc63d6bfd17ff612b6f929988610b"
+      },
+      "destinations": {
+        "057313215210-us-west-2": {
+          "repositoryName": "cdk-hnb659fds-container-assets-057313215210-us-west-2",
+          "imageTag": "3fb194a0eb37cedb6720ad5adb808ed5b3edc63d6bfd17ff612b6f929988610b",
+          "region": "us-west-2",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::057313215210:role/cdk-hnb659fds-image-publishing-role-057313215210-us-west-2"
+        }
+      }
+    }
+  }
+}

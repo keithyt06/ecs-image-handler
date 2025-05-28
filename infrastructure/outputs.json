@@ -1,0 +1,9 @@
+{
+  "ecs-image-handler-stack": {
+    "ECSImageHandlerServiceServiceURL24A953AE": "http://ecs-im-ECSIm-it8QgoIrVB2b-636527723.us-west-2.elb.amazonaws.com",
+    "BucketPolicy0": "{\"Action\":\"s3:GetObject\",\"Effect\":\"Allow\",\"Principal\":{\"CanonicalUser\":\"66e06ce57e78a51a80add27820341970a99e7bd4be6fe86208b115951a5e6015e60e26c5d68f52d2267aa429e4a2190d\"},\"Resource\":\"arn:aws:s3:::new-ue1-img/*\"}",
+    "DistributionUrl0": "https://d20b9gxckkdank.cloudfront.net",
+    "ECSImageHandlerServiceLoadBalancerDNSBD92CBC2": "ecs-im-ECSIm-it8QgoIrVB2b-636527723.us-west-2.elb.amazonaws.com",
+    "StyleConfig": "ecs-image-handler-stack-ECSImageHandlerStyleTable1A843F83-1HKFFKYVPMOKZ"
+  }
+}

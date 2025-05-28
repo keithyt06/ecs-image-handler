@@ -1,0 +1,13 @@
+export declare function inRange(val: number, min: number, max: number): boolean;
+export declare function hexColor(c: string): boolean;
+export declare function defined(val: any): boolean;
+export declare function object(val: any): boolean;
+export declare function plainObject(val: any): boolean;
+export declare function fn(val: any): boolean;
+export declare function bool(val: any): boolean;
+export declare function buffer(val: any): boolean;
+export declare function typedArray(val: any): boolean;
+export declare function string(val: any): boolean;
+export declare function number(val: any): boolean;
+export declare function integer(val: any): boolean;
+export declare function inArray(val: any, list: any[]): boolean;
