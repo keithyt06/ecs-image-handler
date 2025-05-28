@@ -1,6 +1,15 @@
 import * as child_process from 'child_process';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
+import * as crypto from 'crypto';
+import { promisify } from 'util';
 import { IAction, InvalidArgument, IActionOpts, ReadOnly } from '..';
 import { IExtendedProcessContext } from './context';
+
+// 将fs的一些方法转换为Promise模式
+const fsUnlink = promisify(fs.unlink);
+const fsReadFile = promisify(fs.readFile);
 
 /**
  * 视频压缩选项接口
@@ -177,8 +186,95 @@ export class CompressAction implements IAction {
     }
   }
   
-  private executeFFmpeg(args: string[]): Promise<Buffer> {
-    console.log(`执行ffmpeg命令: ffmpeg ${args.join(' ')}`);
+  /**
+   * 根据格式确定是否需要使用临时文件处理
+   * @param format 视频格式
+   * @returns 是否需要使用临时文件
+   */
+  private requiresTempFile(format: string): boolean {
+    // 不支持管道输出的格式 (主要是MP4和一些容器格式)
+    const tempFileFormats = ['mp4', 'mov', 'mkv'];
+    return tempFileFormats.includes(format.toLowerCase());
+  }
+  
+  /**
+   * 生成唯一的临时文件路径
+   * @param format 文件格式
+   * @returns 临时文件路径
+   */
+  private generateTempFilePath(format: string): string {
+    const tempDir = os.tmpdir();
+    const timestamp = Date.now();
+    const randomString = crypto.randomBytes(8).toString('hex');
+    return path.join(tempDir, `video-compress-${timestamp}-${randomString}.${format}`);
+  }
+  
+  /**
+   * 使用临时文件执行FFmpeg命令
+   * @param args FFmpeg参数
+   * @param format 视频格式
+   * @returns 处理后的视频数据
+   */
+  private async executeWithTempFile(args: string[], format: string): Promise<Buffer> {
+    // 生成临时文件路径
+    const tempFilePath = this.generateTempFilePath(format);
+    
+    // 替换输出管道为临时文件
+    const fileArgs = [...args.slice(0, -1), tempFilePath];
+    
+    console.log(`执行ffmpeg命令(临时文件模式): ffmpeg ${fileArgs.join(' ')}`);
+    
+    return new Promise<Buffer>((resolve, reject) => {
+      const child = child_process.spawn('ffmpeg', fileArgs);
+      
+      // 记录stderr以便调试
+      let stderr = '';
+      if (child.stderr) {
+        child.stderr.on('data', (chunk) => {
+          stderr += chunk.toString();
+        });
+      }
+      
+      child.on('error', (err) => {
+        console.error(`FFmpeg错误: ${err.message}`);
+        // 清理临时文件
+        fsUnlink(tempFilePath).catch(() => {});
+        reject(err);
+      });
+      
+      child.on('close', async (code, signal) => {
+        if (code === 0 && signal === null) {
+          try {
+            // 读取临时文件
+            const data = await fsReadFile(tempFilePath);
+            // 清理临时文件
+            await fsUnlink(tempFilePath);
+            console.log(`临时文件已清理: ${tempFilePath}`);
+            resolve(data);
+          } catch (err) {
+            console.error(`读取或清理临时文件失败: ${err}`);
+            // 尝试清理临时文件
+            fsUnlink(tempFilePath).catch(() => {});
+            reject(err);
+          }
+        } else {
+          console.error(`FFmpeg退出码: ${code}, 信号: ${signal}`);
+          console.error(`错误输出: ${stderr}`);
+          // 尝试清理临时文件
+          fsUnlink(tempFilePath).catch(() => {});
+          reject(new Error(`FFmpeg exited with code ${code}`));
+        }
+      });
+    });
+  }
+  
+  /**
+   * 使用管道执行FFmpeg命令
+   * @param args FFmpeg参数
+   * @returns 处理后的视频数据
+   */
+  private executePipeProcess(args: string[]): Promise<Buffer> {
+    console.log(`执行ffmpeg命令(管道模式): ffmpeg ${args.join(' ')}`);
     const child = child_process.spawn('ffmpeg', args);
     
     return new Promise<Buffer>((resolve, reject) => {
@@ -224,6 +320,29 @@ export class CompressAction implements IAction {
         }
       });
     });
+  }
+  
+  /**
+   * 根据格式选择合适的执行方式
+   * @param args FFmpeg参数
+   * @returns 处理后的视频数据
+   */
+  private executeFFmpeg(args: string[]): Promise<Buffer> {
+    // 从参数中提取格式信息
+    let format = 'mp4'; // 默认格式
+    const formatIndex = args.indexOf('-f');
+    if (formatIndex !== -1 && formatIndex + 1 < args.length) {
+      format = args[formatIndex + 1];
+    }
+    
+    // 根据格式选择处理方式
+    if (this.requiresTempFile(format)) {
+      console.log(`格式 ${format} 不支持管道输出，使用临时文件模式`);
+      return this.executeWithTempFile(args, format);
+    } else {
+      console.log(`格式 ${format} 支持管道输出，使用管道模式`);
+      return this.executePipeProcess(args);
+    }
   }
   
   public beforeNewContext(_ctx: IExtendedProcessContext, _params: string[], _index: number): void {
