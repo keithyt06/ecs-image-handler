@@ -10,10 +10,24 @@ export interface VideoCompressOpts extends IActionOpts {
     br: number;
     fmt: string;
     preset: string;
+    maxduration?: number;
 }
 export declare class CompressAction implements IAction {
     readonly name: string;
     validate(params: string[]): ReadOnly<VideoCompressOpts>;
+    /**
+     * 使用ffprobe获取视频元数据
+     * @param url 视频URL
+     * @returns 包含时长、比特率等信息的元数据对象
+     */
+    private getVideoMetadata;
+    /**
+     * 自动调整处理选项，针对大型视频优化
+     * @param opt 原处理选项
+     * @param metadata 视频元数据
+     * @returns 调整后的处理选项
+     */
+    private optimizeOptionsForLargeVideo;
     process(ctx: IExtendedProcessContext, params: string[]): Promise<void>;
     private buildFFmpegArgs;
     private getContentType;
